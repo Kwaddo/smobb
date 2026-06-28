@@ -74,13 +74,13 @@ pub fn story_lines(transcript: &[crate::app::Span], glitch: bool) -> Vec<Line<'s
     let mut prev: Option<Speaker> = None;
     for (idx, s) in transcript.iter().enumerate() {
         let label = s.speaker.map(|sp| sp.label()).unwrap_or("");
-        let changed = s.speaker.is_some() && s.speaker != prev && !label.is_empty();
+        let changed = s.speaker != prev && !label.is_empty();
         if changed {
             if !lines.is_empty() {
                 lines.push(Line::from(""));
             }
             lines.push(Line::from(RSpan::styled(
-                label.to_string(),
+                label,
                 Style::default()
                     .fg(RColor::Rgb(120, 120, 120))
                     .add_modifier(Modifier::DIM | Modifier::BOLD),
@@ -98,7 +98,7 @@ pub fn story_lines(transcript: &[crate::app::Span], glitch: bool) -> Vec<Line<'s
             s.text.clone()
         };
         lines.push(Line::from(RSpan::styled(text, style)));
-        if s.speaker.is_some() && !label.is_empty() {
+        if !label.is_empty() {
             prev = s.speaker;
         }
     }
@@ -234,8 +234,15 @@ pub fn render(f: &mut Frame, app: &App) {
     }
 
     // input line
-    let hint =
-        "[Tab] sidebar  [hold Space] fast  [F2] instant  [F3] effects  ['leave' exits]  [Esc] quit";
+    let fx_label = if app.reduced_effects() {
+        "[F3] effects:OFF"
+    } else {
+        "[F3] effects"
+    };
+    let hint = format!(
+        "[Tab] sidebar  [hold Space] fast  [F2] instant  {}  ['leave' exits]  [Esc] quit",
+        fx_label
+    );
     let input = Paragraph::new(Line::from(vec![
         RSpan::styled(
             format!("> {}", app.input()),

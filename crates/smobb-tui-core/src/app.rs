@@ -710,6 +710,10 @@ mod tests {
         app.submit_for_test("go");
         app.tick(t0);
         assert_eq!(app.banner(), Some("DELETING"));
+        assert!(
+            !app.transcript().iter().any(|s| s.text == "x"),
+            "line withheld during banner"
+        );
         app.tick(t0 + Duration::from_millis(2000));
         assert_eq!(app.banner(), None);
     }

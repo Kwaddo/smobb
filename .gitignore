@@ -1,6 +1,7 @@
 # Rust build output
 /target/
 **/*.rs.bk
+*.rlib
 
 # Web (trunk) build output
 /crates/smobb-web/dist/

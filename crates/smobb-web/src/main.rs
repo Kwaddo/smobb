@@ -113,8 +113,9 @@ fn main() -> std::io::Result<()> {
             let mut a = app.borrow_mut();
             a.tick(web_time::Instant::now());
         }
-        sync_effects(&app.borrow());
-        ui::render(f, &app.borrow());
+        let a = app.borrow();
+        sync_effects(&a);
+        ui::render(f, &a);
     });
 
     Ok(())

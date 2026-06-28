@@ -135,7 +135,9 @@ body::after {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  /* no animated flicker is introduced here; scanlines remain static */
+  body.fx-flash #fx-flash,
+  body.fx-glitch #grid { animation: none !important; }
+  body.fx-flash #fx-flash { opacity: 0; }
 }
 
 /* --- effect overlays --------------------------------------------------- */
@@ -173,7 +175,7 @@ body.fx-glitch #grid {
 @keyframes smobb-glitch {
   0%   { transform: translate(0, 0); filter: none; }
   50%  { transform: translate(-2px, 1px); filter: hue-rotate(25deg) saturate(1.4); }
-  100% { transform: translate(2px, -1px); filter: none; }
+  100% { transform: translate(0, 0); filter: none; }
 }
 
 /* accessibility: kill all motion */
@@ -182,3 +184,4 @@ body.reduced.fx-glitch #grid {
   animation: none !important;
 }
 body.reduced #fx-flash { opacity: 0; }
+body.reduced #controls button[data-key="F3"] { background: var(--btn-active); }
