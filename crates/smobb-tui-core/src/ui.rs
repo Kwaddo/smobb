@@ -80,6 +80,9 @@ pub fn story_lines(transcript: &[crate::app::Span]) -> Vec<Line<'static>> {
 /// Build a dramatic full-area banner: the text upper-cased and letter-spaced,
 /// vertically centered. `height` is the available story-area inner height.
 pub fn banner_lines(text: &str, height: u16) -> Vec<Line<'static>> {
+    if height == 0 {
+        return Vec::new();
+    }
     let spaced: String = text
         .to_uppercase()
         .chars()
@@ -329,8 +332,13 @@ mod tests {
             .collect();
         // letter-spaced text present
         assert!(flat.iter().any(|s| s.contains("S E L F")));
-        // vertically padded (more lines than just the text + box)
+        // exactly `height` lines, text centered with top/bottom padding
         assert_eq!(lines.len(), 11);
+    }
+
+    #[test]
+    fn banner_lines_zero_height_is_empty() {
+        assert!(super::banner_lines("SELF", 0).is_empty());
     }
 
     #[test]
