@@ -27,6 +27,10 @@
   <body>
     <!-- ratzilla's DomBackend appends its #grid terminal into <body> on init -->
 
+    <!-- effect overlays toggled via <body> classes by the wasm bridge -->
+    <div id="fx-flash" aria-hidden="true"></div>
+    <div id="fx-mood" aria-hidden="true"></div>
+
     <!-- hidden input: raises the soft keyboard on touch devices -->
     <input
       id="kbd"
@@ -45,6 +49,7 @@
       <button type="button" data-key="Tab" title="Switch Options/Journal">Tab</button>
       <button type="button" id="b-skip" title="Hold to fast-forward">Skip</button>
       <button type="button" data-key="F2" title="Instant text on/off">Inst</button>
+      <button type="button" data-key="F3" title="Reduce effects">FX</button>
       <button type="button" data-key="ArrowUp" title="Scroll up">&#8593;</button>
       <button type="button" data-key="ArrowDown" title="Scroll down">&#8595;</button>
       <button type="button" data-key="Enter" title="Submit">&#9166;</button>

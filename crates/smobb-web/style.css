@@ -137,3 +137,48 @@ body::after {
 @media (prefers-reduced-motion: reduce) {
   /* no animated flicker is introduced here; scanlines remain static */
 }
+
+/* --- effect overlays --------------------------------------------------- */
+#fx-flash, #fx-mood {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 52px;
+  pointer-events: none;
+  z-index: 9500;
+  opacity: 0;
+}
+@media (min-width: 800px) { #fx-flash, #fx-mood { bottom: 40px; } }
+
+/* one-shot flash */
+body.fx-flash #fx-flash {
+  background: #ffffff;
+  animation: smobb-flash 120ms ease-out;
+}
+@keyframes smobb-flash {
+  from { opacity: 0.85; }
+  to   { opacity: 0; }
+}
+
+/* sustained mood tint */
+body.mood-redalert   #fx-mood { background: #ff0000; opacity: 0.10; }
+body.mood-coldcyan   #fx-mood { background: #00d0ff; opacity: 0.08; }
+body.mood-corruption #fx-mood { background: #33ff33; opacity: 0.08; }
+
+/* corruption glitch on the grid */
+body.fx-glitch #grid {
+  animation: smobb-glitch 180ms steps(2) infinite;
+}
+@keyframes smobb-glitch {
+  0%   { transform: translate(0, 0); filter: none; }
+  50%  { transform: translate(-2px, 1px); filter: hue-rotate(25deg) saturate(1.4); }
+  100% { transform: translate(2px, -1px); filter: none; }
+}
+
+/* accessibility: kill all motion */
+body.reduced #fx-flash,
+body.reduced.fx-glitch #grid {
+  animation: none !important;
+}
+body.reduced #fx-flash { opacity: 0; }
