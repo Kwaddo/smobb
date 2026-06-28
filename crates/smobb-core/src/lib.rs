@@ -1,6 +1,7 @@
 //! S.M.O.B.B. core engine: pure, non-blocking narrative state machine.
 pub mod content;
 pub mod decode;
+pub mod effect;
 pub mod engine;
 pub mod recap;
 pub mod save;

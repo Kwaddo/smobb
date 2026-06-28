@@ -16,7 +16,7 @@ pub enum Speaker {
     System,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Deserialize)]
 pub enum Color {
     Black,
     Red,
