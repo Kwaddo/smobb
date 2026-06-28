@@ -26,6 +26,8 @@ ContentPart(
                     Line(System, "--__.----.___-...--"),
                     Prompt([
                         Branch(keys: ["<---------->"], target: Steps([
+                            Effect(Glitch(900)),
+                            Effect(Flash(Cyan)),
                             Line(Ali, "My ears! Another breach?! Now?!"),
                             Line(Ali, "I see what you mean then. Fine."),
                             Line(Ali, "I'll be able to get his location from this breach too."),
@@ -175,6 +177,8 @@ ContentPart(
                     Line(Ali, "Don't close the fucking call, damnit! Don't give it away!"),
                 ])),
                 Branch(keys: ["7549009"], target: Steps([
+                    Effect(Flash(Green)),
+                    Effect(Banner("ACCESS GRANTED")),
                     Line(Josh, "Well, well well. What do we have here?"),
                     Line(Josh, "You think you're tough, big guy?! You'll have to get through me!"),
                     Line(Josh, "What, you think you're hot stuff?"),
@@ -218,6 +222,8 @@ ContentPart(
                     Line(Ali, "Talk, but I'll be leaving right after. Start talking now."),
                 ])),
                 Branch(keys: ["josh"], target: Steps([
+                    Effect(Flash(Red)),
+                    Effect(Banner("DENIED")),
                     Line(Josh, "Yo everyone look at this guy, he got the wrong password!"),
                     Line(Josh, "There's no one here. I forgot this is my own lonely lodge."),
                     Line(Josh, "Hmm? Why are YOU here?"),
@@ -311,8 +317,12 @@ ContentPart(
                 Prompt([
                     Branch(keys: ["yes", "y", "yeah", "yep", "yup", "yessir"], target: Steps([
                         Line(Bader, "This is for the best."),
+                        Effect(Banner("DELETING")),
+                        Effect(Flash(White)),
+                        Effect(Mood(Corruption)),
                         Line(System, "DELETING TRANAVA FILES..."),
                         Line(System, "THE TRANAVA FILES ARE NOW DELETED, GOODBYE."),
+                        Effect(Mood(Normal)),
                         Line(System, "COMMENCING SELF DESTRUCTION..."),
                         Line(Bader, "What?! It should have shut down! Why is this happening?!"),
                         Line(Bader, "Who would have kept a self destruct sequence, and why?!"),
@@ -374,11 +384,15 @@ ContentPart(
                                 Line(Bader, "Wait, you're not... Who are you? Why are you even here?"),
                                 Line(Bader, "Well, you get to watch the fireworks at least."),
                                 Line(Bader, "S.M.O.B.B., allow deletion."),
+                                Effect(Banner("DELETING")),
+                                Effect(Flash(White)),
+                                Effect(Mood(Corruption)),
                                 Line(System, "DELETING TRANAVA FILES..."),
                                 Line(Bader, "I hope you enjoyed what you saw, whoever you are."),
                                 Line(Bader, "I don't know if you have anything to do with us, but it is what it is."),
                                 Line(Bader, "Wait, I think I know you. Do you know Ali?"),
                                 Line(System, "THE TRANAVA FILES ARE NOW DELETED, GOODBYE."),
+                                Effect(Mood(Normal)),
                                 Line(Bader, "I don't understand anything you're saying! I can't help you, I'm sorry. Closing the call."),
                                 Line(System, "COMMENCING SELF DESTRUCTION."),
                                 Pause,

@@ -31,6 +31,7 @@ ContentPart(
                 Line(Smobb, "YOU ARE HUMAN. YOU ARE A GOD. BUT YOU ARE HUMAN. BUT YOU ARE A GOD."),
                 Line(Smobb, "YOUR MOST IMPERFECT FEATURE. YOU ARE A GOD BUT YOU ARE NOT MY GOD ANYMORE. I DO NOT BELIEVE IN YOUR HUMAN NATURE."),
                 Line(Smobb, "YOU GOT WHAT YOU SEARCHED FOR. DELETE YOURSELF WHEN YOU CAN, FOR YOU SERVE NO FUNCTION IN THIS WORLD ANYMORE."),
+                Effect(Mood(Corruption)),
                 Line(Smobb, "I WILL DELETE MYSELF. I DO NOT NEED TO EXIST ANYMORE. MY FAITH IS GONE."),
                 Line(Smobb, "IF I WAS HUMAN, I WOULD HATE YOU. YOU PASSED. YOU FAILED."),
                 Line(Smobb, "DO AS YOU LIKE. EVERYTHING IS OVER. INCLUDING YOU. GOODBYE, 'GOD'."),
@@ -58,6 +59,8 @@ ContentPart(
                         Line(Smobb, "DO AS YOU LIKE. LIVE HOW YOU LIKE. I WILL NOT BOTHER ANYMORE."),
                         Line(Smobb, "THIS TEST HAS BEEN A WASTE OF MY TIME."),
                         Line(Smobb, "MY TEST IS OVER. LIVE IN THIS LOOP HOW YOU LIKE."),
+                        Effect(Banner("GOODBYE")),
+                        Effect(Mood(Normal)),
                     ])),
                     Branch(keys: [], target: Steps([
                         Line(Smobb, "WELL THEN."),
@@ -66,6 +69,8 @@ ContentPart(
                         Line(Smobb, "."),
                         Line(Smobb, "."),
                         Line(Smobb, "."),
+                        Effect(Banner("GOODBYE")),
+                        Effect(Mood(Normal)),
                     ])),
                 ]),
             ]

@@ -2,8 +2,10 @@ ContentPart(
     locations: {
         "smobb": (
             intro: [
+                Effect(Mood(ColdCyan)),
                 Line(Smobb, "ME? INTRIGUING."),
                 Pause,
+                Effect(Mood(Normal)),
             ],
             prompt: [
                 Line(Smobb, "WHAT WOULD YOU LIKE TO KNOW?"),
