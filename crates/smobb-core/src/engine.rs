@@ -56,7 +56,11 @@ fn structural_label(key: &str) -> String {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Output {
-    Line { text: String, color: Color, speaker: Option<Speaker> },
+    Line {
+        text: String,
+        color: Color,
+        speaker: Option<Speaker>,
+    },
     Sleep(u32),
     AwaitInput,
     Recap(String),
@@ -1334,8 +1338,17 @@ mod tests {
         e.set_skip(true);
         let _ = e.start();
         let out = e.advance("go");
-        assert!(out.iter().any(|o| matches!(o, Output::Line { speaker: Some(Speaker::Ali), .. })));
-        assert!(e.journal_view().iter().all(|o| matches!(o, Output::Line { speaker: None, .. })));
+        assert!(out.iter().any(|o| matches!(
+            o,
+            Output::Line {
+                speaker: Some(Speaker::Ali),
+                ..
+            }
+        )));
+        assert!(e
+            .journal_view()
+            .iter()
+            .all(|o| matches!(o, Output::Line { speaker: None, .. })));
     }
 
     #[test]
@@ -1351,18 +1364,24 @@ mod tests {
         e.set_skip(true);
         let _ = e.start();
         let out = e.advance("go");
-        assert!(out.iter().any(|o| matches!(o, Output::Effect(EffectKind::Flash(_)))));
+        assert!(out
+            .iter()
+            .any(|o| matches!(o, Output::Effect(EffectKind::Flash(_)))));
     }
 
     #[test]
     fn reduced_effects_round_trips_through_snapshot() {
         use crate::content;
-        let mut e = Engine::new(content::from_str(&[r#"ContentPart(locations:{"hub":(commands:[])},scenes:{})"#]));
+        let mut e = Engine::new(content::from_str(&[
+            r#"ContentPart(locations:{"hub":(commands:[])},scenes:{})"#,
+        ]));
         e.set_reduced_effects(true);
         let snap = e.snapshot();
         assert!(snap.reduced_effects);
         let snap2 = crate::save::SaveState::from_json(&snap.to_json()).unwrap();
-        let mut e2 = Engine::new(content::from_str(&[r#"ContentPart(locations:{"hub":(commands:[])},scenes:{})"#]));
+        let mut e2 = Engine::new(content::from_str(&[
+            r#"ContentPart(locations:{"hub":(commands:[])},scenes:{})"#,
+        ]));
         e2.restore(snap2);
         assert!(e2.reduced_effects());
     }

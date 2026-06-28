@@ -175,8 +175,17 @@ impl App {
                 }
             };
             match item {
-                Output::Line { text, color, speaker } => {
-                    self.transcript.push(Span { text, color, dim: false, speaker });
+                Output::Line {
+                    text,
+                    color,
+                    speaker,
+                } => {
+                    self.transcript.push(Span {
+                        text,
+                        color,
+                        dim: false,
+                        speaker,
+                    });
                     self.reveal_at = None;
                 }
                 Output::Translation(t) => {
@@ -220,21 +229,30 @@ impl App {
                             continue; // no flash, no block
                         }
                         self.flash_tone = tone;
-                        let dur = if fast { FLASH_MS.min(FAST_STEP_MS) } else { FLASH_MS };
+                        let dur = if fast {
+                            FLASH_MS.min(FAST_STEP_MS)
+                        } else {
+                            FLASH_MS
+                        };
                         self.flash_until = Some(now + std::time::Duration::from_millis(dur));
                         self.reveal_at = Some(now + std::time::Duration::from_millis(dur));
                         return;
                     }
                     EffectKind::Banner(text) => {
                         self.banner = Some(text);
-                        let dur = if fast { BANNER_MS.min(FAST_STEP_MS) } else { BANNER_MS };
+                        let dur = if fast {
+                            BANNER_MS.min(FAST_STEP_MS)
+                        } else {
+                            BANNER_MS
+                        };
                         self.banner_until = Some(now + std::time::Duration::from_millis(dur));
                         self.reveal_at = Some(now + std::time::Duration::from_millis(dur));
                         return;
                     }
                     EffectKind::Glitch(ms) => {
                         if !self.engine.reduced_effects() {
-                            self.glitch_until = Some(now + std::time::Duration::from_millis(ms as u64));
+                            self.glitch_until =
+                                Some(now + std::time::Duration::from_millis(ms as u64));
                         }
                         // non-blocking: keep revealing
                     }
@@ -267,7 +285,11 @@ impl App {
         self.reveal_at = None;
         while let Some(item) = self.queue.pop_front() {
             match item {
-                Output::Line { text, color, speaker } => self.transcript.push(Span {
+                Output::Line {
+                    text,
+                    color,
+                    speaker,
+                } => self.transcript.push(Span {
                     text,
                     color,
                     dim: false,
@@ -657,10 +679,16 @@ mod tests {
         app.submit_for_test("go");
         app.tick(t0); // hits Effect(Flash) -> blocks ~120ms
         assert!(app.flash().is_some(), "flash active during the block");
-        assert!(!app.transcript().iter().any(|s| s.text == "after"), "line withheld during flash");
+        assert!(
+            !app.transcript().iter().any(|s| s.text == "after"),
+            "line withheld during flash"
+        );
         app.tick(t0 + Duration::from_millis(200));
         assert!(app.flash().is_none(), "flash expired");
-        assert!(app.transcript().iter().any(|s| s.text == "after"), "line revealed after flash");
+        assert!(
+            app.transcript().iter().any(|s| s.text == "after"),
+            "line revealed after flash"
+        );
     }
 
     #[test]
@@ -704,7 +732,10 @@ mod tests {
         app.submit_for_test("go");
         app.tick(t0);
         assert!(app.glitch(), "glitch active");
-        assert!(app.transcript().iter().any(|s| s.text == "x"), "glitch does not block reveal");
+        assert!(
+            app.transcript().iter().any(|s| s.text == "x"),
+            "glitch does not block reveal"
+        );
     }
 
     #[test]
@@ -758,6 +789,9 @@ mod tests {
         app.submit_for_test("go");
         app.tick(t0);
         assert!(app.flash().is_none(), "no flash under reduced effects");
-        assert!(app.transcript().iter().any(|s| s.text == "after"), "no block under reduced effects");
+        assert!(
+            app.transcript().iter().any(|s| s.text == "after"),
+            "no block under reduced effects"
+        );
     }
 }

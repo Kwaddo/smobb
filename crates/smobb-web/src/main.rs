@@ -52,7 +52,10 @@ fn to_key(k: &KeyEvent) -> Option<Key> {
 
 /// Mirror the App's effect state onto <body> classes so CSS can react.
 fn sync_effects(app: &App) {
-    let Some(body) = web_sys::window().and_then(|w| w.document()).and_then(|d| d.body()) else {
+    let Some(body) = web_sys::window()
+        .and_then(|w| w.document())
+        .and_then(|d| d.body())
+    else {
         return;
     };
     let cl = body.class_list();

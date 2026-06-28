@@ -28,12 +28,21 @@ mod tests {
 
     #[test]
     fn parses_each_effect_variant() {
-        assert_eq!(ron::from_str::<EffectKind>("Flash(Red)").unwrap(), EffectKind::Flash(Color::Red));
-        assert_eq!(ron::from_str::<EffectKind>("Glitch(900)").unwrap(), EffectKind::Glitch(900));
+        assert_eq!(
+            ron::from_str::<EffectKind>("Flash(Red)").unwrap(),
+            EffectKind::Flash(Color::Red)
+        );
+        assert_eq!(
+            ron::from_str::<EffectKind>("Glitch(900)").unwrap(),
+            EffectKind::Glitch(900)
+        );
         assert_eq!(
             ron::from_str::<EffectKind>("Banner(\"DELETING\")").unwrap(),
             EffectKind::Banner("DELETING".to_string())
         );
-        assert_eq!(ron::from_str::<EffectKind>("Mood(RedAlert)").unwrap(), EffectKind::Mood(Mood::RedAlert));
+        assert_eq!(
+            ron::from_str::<EffectKind>("Mood(RedAlert)").unwrap(),
+            EffectKind::Mood(Mood::RedAlert)
+        );
     }
 }

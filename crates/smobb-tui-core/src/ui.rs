@@ -49,9 +49,8 @@ pub fn sidebar_line(o: &Output) -> Line<'static> {
     match o {
         Output::Line { text, color, .. } => {
             let trimmed = text.trim_start();
-            let is_header = trimmed.starts_with('[')
-                || trimmed.starts_with("==")
-                || trimmed.ends_with(':');
+            let is_header =
+                trimmed.starts_with('[') || trimmed.starts_with("==") || trimmed.ends_with(':');
             let mut style = Style::default().fg(to_rgb(*color));
             if is_header {
                 style = style.add_modifier(Modifier::BOLD);
@@ -82,12 +81,16 @@ pub fn story_lines(transcript: &[crate::app::Span], glitch: bool) -> Vec<Line<'s
             }
             lines.push(Line::from(RSpan::styled(
                 label.to_string(),
-                Style::default().fg(RColor::Rgb(120, 120, 120)).add_modifier(Modifier::DIM | Modifier::BOLD),
+                Style::default()
+                    .fg(RColor::Rgb(120, 120, 120))
+                    .add_modifier(Modifier::DIM | Modifier::BOLD),
             )));
         }
         let mut style = Style::default().fg(to_rgb(s.color));
         if s.dim {
-            style = style.add_modifier(Modifier::DIM).fg(RColor::Rgb(160, 160, 160));
+            style = style
+                .add_modifier(Modifier::DIM)
+                .fg(RColor::Rgb(160, 160, 160));
         }
         let text = if glitch && idx == last {
             scramble(&s.text, idx)
@@ -176,7 +179,9 @@ pub fn render(f: &mut Frame, app: &App) {
             };
             let lines: Vec<Line> = outs.iter().map(sidebar_line).collect();
             f.render_widget(
-                Paragraph::new(lines).wrap(Wrap { trim: false }).block(Block::bordered().title(title)),
+                Paragraph::new(lines)
+                    .wrap(Wrap { trim: false })
+                    .block(Block::bordered().title(title)),
                 sa,
             );
         }
@@ -229,10 +234,19 @@ pub fn render(f: &mut Frame, app: &App) {
     }
 
     // input line
-    let hint = "[Tab] sidebar  [hold Space] fast  [F2] instant  [F3] effects  ['leave' exits]  [Esc] quit";
+    let hint =
+        "[Tab] sidebar  [hold Space] fast  [F2] instant  [F3] effects  ['leave' exits]  [Esc] quit";
     let input = Paragraph::new(Line::from(vec![
-        RSpan::styled(format!("> {}", app.input()), Style::default().fg(RColor::Rgb(220, 220, 220))),
-        RSpan::styled(format!("    {}", hint), Style::default().fg(RColor::Rgb(110, 110, 110)).add_modifier(Modifier::DIM)),
+        RSpan::styled(
+            format!("> {}", app.input()),
+            Style::default().fg(RColor::Rgb(220, 220, 220)),
+        ),
+        RSpan::styled(
+            format!("    {}", hint),
+            Style::default()
+                .fg(RColor::Rgb(110, 110, 110))
+                .add_modifier(Modifier::DIM),
+        ),
     ]));
     f.render_widget(input, input_area);
 }
@@ -250,14 +264,34 @@ mod tests {
         use crate::app::Span;
         use smobb_core::speaker::{Color, Speaker};
         let t = vec![
-            Span { text: "hi".into(), color: Color::Aqua, dim: false, speaker: Some(Speaker::Ali) },
-            Span { text: "there".into(), color: Color::Aqua, dim: false, speaker: Some(Speaker::Ali) },
-            Span { text: "YO".into(), color: Color::Salmon, dim: false, speaker: Some(Speaker::Bader) },
+            Span {
+                text: "hi".into(),
+                color: Color::Aqua,
+                dim: false,
+                speaker: Some(Speaker::Ali),
+            },
+            Span {
+                text: "there".into(),
+                color: Color::Aqua,
+                dim: false,
+                speaker: Some(Speaker::Ali),
+            },
+            Span {
+                text: "YO".into(),
+                color: Color::Salmon,
+                dim: false,
+                speaker: Some(Speaker::Bader),
+            },
         ];
         let lines = super::story_lines(&t, false);
         let flat: Vec<String> = lines
             .iter()
-            .map(|l| l.spans.iter().map(|s| s.content.to_string()).collect::<String>())
+            .map(|l| {
+                l.spans
+                    .iter()
+                    .map(|s| s.content.to_string())
+                    .collect::<String>()
+            })
             .collect();
         // exact layout: header, two same-speaker lines, blank spacer, header, line
         assert_eq!(flat, vec!["ALI", "hi", "there", "", "BADER", "YO"]);
@@ -268,14 +302,34 @@ mod tests {
         use crate::app::Span;
         use smobb_core::speaker::{Color, Speaker};
         let t = vec![
-            Span { text: "hi".into(), color: Color::Aqua, dim: false, speaker: Some(Speaker::Ali) },
-            Span { text: "SYSTEM MSG".into(), color: Color::White, dim: false, speaker: Some(Speaker::System) },
-            Span { text: "again".into(), color: Color::Aqua, dim: false, speaker: Some(Speaker::Ali) },
+            Span {
+                text: "hi".into(),
+                color: Color::Aqua,
+                dim: false,
+                speaker: Some(Speaker::Ali),
+            },
+            Span {
+                text: "SYSTEM MSG".into(),
+                color: Color::White,
+                dim: false,
+                speaker: Some(Speaker::System),
+            },
+            Span {
+                text: "again".into(),
+                color: Color::Aqua,
+                dim: false,
+                speaker: Some(Speaker::Ali),
+            },
         ];
         let lines = super::story_lines(&t, false);
         let flat: Vec<String> = lines
             .iter()
-            .map(|l| l.spans.iter().map(|s| s.content.to_string()).collect::<String>())
+            .map(|l| {
+                l.spans
+                    .iter()
+                    .map(|s| s.content.to_string())
+                    .collect::<String>()
+            })
             .collect();
         // System has an empty label, so it renders as a plain line and does NOT
         // reset grouping: only one "ALI" header, no spacer before the second Ali line.
@@ -349,12 +403,24 @@ mod tests {
     fn sidebar_headers_are_bold() {
         use smobb_core::engine::Output;
         use smobb_core::speaker::Color;
-        let header = Output::Line { text: "[Clues]".into(), color: Color::White, speaker: None };
-        let item = Output::Line { text: "  - a clue".into(), color: Color::White, speaker: None };
+        let header = Output::Line {
+            text: "[Clues]".into(),
+            color: Color::White,
+            speaker: None,
+        };
+        let item = Output::Line {
+            text: "  - a clue".into(),
+            color: Color::White,
+            speaker: None,
+        };
         let h = super::sidebar_line(&header);
         let i = super::sidebar_line(&item);
         let bold = |l: &ratatui::text::Line| {
-            l.spans.iter().any(|s| s.style.add_modifier.contains(ratatui::style::Modifier::BOLD))
+            l.spans.iter().any(|s| {
+                s.style
+                    .add_modifier
+                    .contains(ratatui::style::Modifier::BOLD)
+            })
         };
         assert!(bold(&h), "section header should be bold");
         assert!(!bold(&i), "list item should not be bold");
@@ -365,7 +431,12 @@ mod tests {
         let lines = super::banner_lines("SELF", 11);
         let flat: Vec<String> = lines
             .iter()
-            .map(|l| l.spans.iter().map(|s| s.content.to_string()).collect::<String>())
+            .map(|l| {
+                l.spans
+                    .iter()
+                    .map(|s| s.content.to_string())
+                    .collect::<String>()
+            })
             .collect();
         // letter-spaced text present
         assert!(flat.iter().any(|s| s.contains("S E L F")));
