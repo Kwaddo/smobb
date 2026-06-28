@@ -87,3 +87,53 @@ body {
   #controls { height: 40px; opacity: 0.85; }
   body { padding-bottom: 44px; }
 }
+
+/* --- CRT atmosphere ---------------------------------------------------- */
+
+/* per-cell phosphor glow: currentColor = each cell's own color, so the
+   per-speaker palette keeps its hue while glowing */
+#grid span {
+  text-shadow: 0 0 4px currentColor;
+}
+
+/* faint scanlines (kept clear of the control bar) */
+body::before {
+  content: "";
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 52px;
+  pointer-events: none;
+  z-index: 9000;
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(0, 0, 0, 0.18) 0 1px,
+    transparent 1px 3px
+  );
+}
+
+/* vignette darkening the edges */
+body::after {
+  content: "";
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 52px;
+  pointer-events: none;
+  z-index: 8999;
+  background: radial-gradient(
+    ellipse at center,
+    transparent 55%,
+    rgba(0, 0, 0, 0.55) 100%
+  );
+}
+
+@media (min-width: 800px) {
+  body::before, body::after { bottom: 40px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* no animated flicker is introduced here; scanlines remain static */
+}
