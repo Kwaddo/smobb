@@ -26,16 +26,24 @@ fn to_rgb(c: Color) -> RColor {
     RColor::Rgb(r, g, b)
 }
 
-fn output_lines_to_text(outs: &[Output]) -> Vec<Line<'static>> {
-    outs.iter()
-        .filter_map(|o| match o {
-            Output::Line { text, color, .. } => Some(Line::from(RSpan::styled(
-                text.clone(),
-                Style::default().fg(to_rgb(*color)),
-            ))),
-            _ => None,
-        })
-        .collect()
+/// Render one sidebar/journal line, emphasising section headers.
+pub fn sidebar_line(o: &Output) -> Line<'static> {
+    match o {
+        Output::Line { text, color, .. } => {
+            let trimmed = text.trim_start();
+            let is_header = trimmed.starts_with('[')
+                || trimmed.starts_with("==")
+                || trimmed.ends_with(':');
+            let mut style = Style::default().fg(to_rgb(*color));
+            if is_header {
+                style = style.add_modifier(Modifier::BOLD);
+            } else if trimmed.starts_with('-') || trimmed.starts_with('(') {
+                style = style.add_modifier(Modifier::DIM);
+            }
+            Line::from(RSpan::styled(text.clone(), style))
+        }
+        _ => Line::from(""),
+    }
 }
 
 /// Build the transcript as ratatui lines, inserting a dim speaker header line
@@ -112,15 +120,19 @@ pub fn render(f: &mut Frame, app: &App) {
             crate::app::Tab::Options => (" OPTIONS ", app.options_lines()),
             crate::app::Tab::Journal => (" JOURNAL ", app.journal_lines()),
         };
-        let side = Paragraph::new(output_lines_to_text(&outs))
+        let lines: Vec<Line> = outs.iter().map(sidebar_line).collect();
+        let side = Paragraph::new(lines)
             .wrap(Wrap { trim: false })
             .block(Block::bordered().title(title));
         f.render_widget(side, sa);
     }
 
     // input line
-    let hint = "[Tab] sidebar  [hold Space] fast  [F2] instant  ['leave' exits]  [Esc] quit";
-    let input = Paragraph::new(Line::from(format!("> {}    {}", app.input(), hint)));
+    let hint = "[Tab] sidebar  [hold Space] fast  [F2] instant  [F3] effects  ['leave' exits]  [Esc] quit";
+    let input = Paragraph::new(Line::from(vec![
+        RSpan::styled(format!("> {}", app.input()), Style::default().fg(RColor::Rgb(220, 220, 220))),
+        RSpan::styled(format!("    {}", hint), Style::default().fg(RColor::Rgb(110, 110, 110)).add_modifier(Modifier::DIM)),
+    ]));
     f.render_widget(input, input_area);
 }
 
@@ -230,6 +242,21 @@ mod tests {
             !dump.contains("OPTIONS"),
             "OPTIONS should be absent when sidebar is hidden"
         );
+    }
+
+    #[test]
+    fn sidebar_headers_are_bold() {
+        use smobb_core::engine::Output;
+        use smobb_core::speaker::Color;
+        let header = Output::Line { text: "[Clues]".into(), color: Color::White, speaker: None };
+        let item = Output::Line { text: "  - a clue".into(), color: Color::White, speaker: None };
+        let h = super::sidebar_line(&header);
+        let i = super::sidebar_line(&item);
+        let bold = |l: &ratatui::text::Line| {
+            l.spans.iter().any(|s| s.style.add_modifier.contains(ratatui::style::Modifier::BOLD))
+        };
+        assert!(bold(&h), "section header should be bold");
+        assert!(!bold(&i), "list item should not be bold");
     }
 
     #[test]
