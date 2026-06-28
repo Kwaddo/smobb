@@ -15,6 +15,7 @@ fn render(out: &[Output], e: &Engine) -> bool {
                 io::stdout().flush().unwrap();
             }
             Output::End => return true,
+            Output::Effect(_) => {}
         }
     }
     let _ = e;

@@ -62,6 +62,7 @@ pub enum Output {
     Recap(String),
     Translation(String),
     End,
+    Effect(crate::effect::EffectKind),
 }
 
 /// Single-quoted tokens with no whitespace (<=24 chars). Skips contraction apostrophes.
@@ -218,18 +219,20 @@ impl Engine {
                     }
                 }
                 Step::Pause => self.emit_pause(out),
+                Step::Effect(k) => out.push(Output::Effect(k.clone())),
                 _ => {}
             }
         }
     }
 
-    // Minimal Line-only emitter; extended in Task 6.
     fn emit_step_lines(&self, step: &Step, out: &mut Vec<Output>) {
-        if let Step::Line(sp, text) = step {
-            out.push(Output::Line {
+        match step {
+            Step::Line(sp, text) => out.push(Output::Line {
                 text: text.clone(),
                 color: sp.color(),
-            });
+            }),
+            Step::Effect(k) => out.push(Output::Effect(k.clone())),
+            _ => {}
         }
     }
 
@@ -526,8 +529,8 @@ impl Engine {
                 Step::UnlockDecode => {
                     self.decoding_unlocked = true;
                 }
-                Step::Effect(_effect) => {
-                    // Effect processing to be implemented in a future task.
+                Step::Effect(k) => {
+                    out.push(Output::Effect(k));
                 }
             }
         }
@@ -743,6 +746,7 @@ mod tests {
                 Output::AwaitInput => "A",
                 Output::Translation(_) => "T",
                 Output::End => "E",
+                Output::Effect(_) => "X",
             })
             .collect();
         assert_eq!(kinds, vec!["L", "S", "R", "L", "A"]);
@@ -1278,5 +1282,21 @@ mod tests {
         let _ = e.start();
         let _ = e.advance("7549009");
         assert!(e.discovered().contains("7549009"));
+    }
+
+    #[test]
+    fn effect_step_emits_output_effect_even_when_skipping() {
+        use crate::content;
+        use crate::effect::EffectKind;
+        let c = content::from_str(&[r#"ContentPart(
+            locations: { "hub": ( commands: [ Branch(keys:["go"], target: Steps([
+                Effect(Flash(Red)), Return ])) ] ) },
+            scenes: {},
+        )"#]);
+        let mut e = Engine::new(c);
+        e.set_skip(true);
+        let _ = e.start();
+        let out = e.advance("go");
+        assert!(out.iter().any(|o| matches!(o, Output::Effect(EffectKind::Flash(_)))));
     }
 }
