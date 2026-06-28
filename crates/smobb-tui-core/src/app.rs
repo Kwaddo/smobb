@@ -1,3 +1,4 @@
+use smobb_core::effect::{EffectKind, Mood};
 use smobb_core::engine::{Engine, Output};
 use smobb_core::speaker::{Color, Speaker};
 use std::collections::VecDeque;
@@ -41,6 +42,10 @@ const FAST_STEP_MS: u64 = 40;
 /// the terminal's key auto-repeat gap so holding feels continuous; on release,
 /// normal pacing resumes after at most this long.
 const FAST_WINDOW_MS: u64 = 400;
+/// One-shot screen-flash duration (ms).
+const FLASH_MS: u64 = 120;
+/// Banner takeover duration (ms).
+const BANNER_MS: u64 = 1400;
 
 pub struct App {
     engine: Engine,
@@ -57,6 +62,13 @@ pub struct App {
     fast_until: Option<Instant>,
     fast_requested: bool,
     dirty: bool,
+    flash_until: Option<Instant>,
+    flash_tone: Color,
+    glitch_until: Option<Instant>,
+    banner: Option<String>,
+    banner_until: Option<Instant>,
+    mood: Mood,
+    last_tick: Instant,
 }
 
 impl App {
@@ -77,6 +89,13 @@ impl App {
             fast_until: None,
             fast_requested: false,
             dirty: false,
+            flash_until: None,
+            flash_tone: Color::White,
+            glitch_until: None,
+            banner: None,
+            banner_until: None,
+            mood: Mood::Normal,
+            last_tick: Instant::now(),
         };
         app.enqueue(outputs);
         app
@@ -103,6 +122,11 @@ impl App {
         self.user_scrolled = false;
         self.fast_until = None;
         self.fast_requested = false;
+        self.flash_until = None;
+        self.glitch_until = None;
+        self.banner = None;
+        self.banner_until = None;
+        self.mood = Mood::Normal;
     }
 
     pub fn quit(&self) -> bool {
@@ -117,6 +141,7 @@ impl App {
     }
 
     pub fn tick(&mut self, now: Instant) {
+        self.last_tick = now;
         if self.awaiting || self.quit {
             return;
         }
@@ -188,9 +213,30 @@ impl App {
                     self.quit = true;
                     return;
                 }
-                Output::Effect(_) => {
-                    self.reveal_at = None;
-                }
+                Output::Effect(kind) => match kind {
+                    EffectKind::Flash(tone) => {
+                        self.flash_tone = tone;
+                        let dur = if fast { FLASH_MS.min(FAST_STEP_MS) } else { FLASH_MS };
+                        self.flash_until = Some(now + std::time::Duration::from_millis(dur));
+                        self.reveal_at = Some(now + std::time::Duration::from_millis(dur));
+                        return;
+                    }
+                    EffectKind::Banner(text) => {
+                        self.banner = Some(text);
+                        let dur = if fast { BANNER_MS.min(FAST_STEP_MS) } else { BANNER_MS };
+                        self.banner_until = Some(now + std::time::Duration::from_millis(dur));
+                        self.reveal_at = Some(now + std::time::Duration::from_millis(dur));
+                        return;
+                    }
+                    EffectKind::Glitch(ms) => {
+                        self.glitch_until = Some(now + std::time::Duration::from_millis(ms as u64));
+                        // non-blocking: keep revealing
+                    }
+                    EffectKind::Mood(m) => {
+                        self.mood = m;
+                        // non-blocking, instantaneous
+                    }
+                },
             }
         }
     }
@@ -242,7 +288,7 @@ impl App {
                     self.quit = true;
                     return;
                 }
-                Output::Effect(_) => {} // ignored until Task 5
+                Output::Effect(_) => {} // effects ignored by the test-only bulk drain
             }
         }
     }
@@ -296,6 +342,27 @@ impl App {
                 }
             }
         }
+    }
+
+    pub fn flash(&self) -> Option<Color> {
+        if self.flash_until.is_some_and(|u| self.last_tick < u) {
+            Some(self.flash_tone)
+        } else {
+            None
+        }
+    }
+    pub fn glitch(&self) -> bool {
+        self.glitch_until.is_some_and(|u| self.last_tick < u)
+    }
+    pub fn banner(&self) -> Option<&str> {
+        if self.banner_until.is_some_and(|u| self.last_tick < u) {
+            self.banner.as_deref()
+        } else {
+            None
+        }
+    }
+    pub fn mood(&self) -> Mood {
+        self.mood
     }
 
     pub fn tab(&self) -> Tab {
@@ -555,5 +622,97 @@ mod tests {
         app.tick(Instant::now());
         assert!(app.transcript().iter().any(|s| s.text == "hi"));
         assert_eq!(app.input(), ""); // cleared on submit
+    }
+
+    #[test]
+    fn flash_blocks_briefly_then_reveals() {
+        use smobb_core::content;
+        use smobb_core::engine::Engine;
+        use std::time::Duration;
+        use web_time::Instant;
+        let c = content::from_str(&[r#"ContentPart(
+            locations: { "hub": ( prompt:[Line(Smobb,"P")],
+                commands: [ Branch(keys:["go"], target: Steps([ Effect(Flash(Red)), Line(Ali,"after"), Return ])) ] ) },
+            scenes: {},
+        )"#]);
+        let mut engine = Engine::new(c);
+        engine.set_skip(true);
+        let mut app = App::new(engine);
+        let t0 = Instant::now();
+        app.tick(t0);
+        app.submit_for_test("go");
+        app.tick(t0); // hits Effect(Flash) -> blocks ~120ms
+        assert!(app.flash().is_some(), "flash active during the block");
+        assert!(!app.transcript().iter().any(|s| s.text == "after"), "line withheld during flash");
+        app.tick(t0 + Duration::from_millis(200));
+        assert!(app.flash().is_none(), "flash expired");
+        assert!(app.transcript().iter().any(|s| s.text == "after"), "line revealed after flash");
+    }
+
+    #[test]
+    fn banner_shows_text_then_clears() {
+        use smobb_core::content;
+        use smobb_core::engine::Engine;
+        use std::time::Duration;
+        use web_time::Instant;
+        let c = content::from_str(&[r#"ContentPart(
+            locations: { "hub": ( prompt:[Line(Smobb,"P")],
+                commands: [ Branch(keys:["go"], target: Steps([ Effect(Banner("DELETING")), Line(Ali,"x"), Return ])) ] ) },
+            scenes: {},
+        )"#]);
+        let mut engine = Engine::new(c);
+        engine.set_skip(true);
+        let mut app = App::new(engine);
+        let t0 = Instant::now();
+        app.tick(t0);
+        app.submit_for_test("go");
+        app.tick(t0);
+        assert_eq!(app.banner(), Some("DELETING"));
+        app.tick(t0 + Duration::from_millis(2000));
+        assert_eq!(app.banner(), None);
+    }
+
+    #[test]
+    fn glitch_is_non_blocking() {
+        use smobb_core::content;
+        use smobb_core::engine::Engine;
+        use web_time::Instant;
+        let c = content::from_str(&[r#"ContentPart(
+            locations: { "hub": ( prompt:[Line(Smobb,"P")],
+                commands: [ Branch(keys:["go"], target: Steps([ Effect(Glitch(900)), Line(Ali,"x"), Return ])) ] ) },
+            scenes: {},
+        )"#]);
+        let mut engine = Engine::new(c);
+        engine.set_skip(true);
+        let mut app = App::new(engine);
+        let t0 = Instant::now();
+        app.tick(t0);
+        app.submit_for_test("go");
+        app.tick(t0);
+        assert!(app.glitch(), "glitch active");
+        assert!(app.transcript().iter().any(|s| s.text == "x"), "glitch does not block reveal");
+    }
+
+    #[test]
+    fn mood_sets_and_enqueue_clears() {
+        use smobb_core::content;
+        use smobb_core::effect::Mood;
+        use smobb_core::engine::Engine;
+        use web_time::Instant;
+        let c = content::from_str(&[r#"ContentPart(
+            locations: { "hub": ( prompt:[Line(Smobb,"P")],
+                commands: [ Branch(keys:["go"], target: Steps([ Effect(Mood(RedAlert)), Return ])) ] ) },
+            scenes: {},
+        )"#]);
+        let mut engine = Engine::new(c);
+        engine.set_skip(true);
+        let mut app = App::new(engine);
+        let t0 = Instant::now();
+        app.tick(t0);
+        app.submit_for_test("go");
+        app.tick(t0);
+        assert_eq!(app.mood(), Mood::RedAlert);
+        app.submit_for_test("go"); // re-enqueue -> reset
+        assert_eq!(app.mood(), Mood::Normal);
     }
 }
