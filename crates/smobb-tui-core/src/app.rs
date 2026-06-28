@@ -26,6 +26,7 @@ pub enum Key {
     Tab,
     F1,
     F2,
+    F3,
     Up,
     Down,
     PageUp,
@@ -215,6 +216,9 @@ impl App {
                 }
                 Output::Effect(kind) => match kind {
                     EffectKind::Flash(tone) => {
+                        if self.engine.reduced_effects() {
+                            continue; // no flash, no block
+                        }
                         self.flash_tone = tone;
                         let dur = if fast { FLASH_MS.min(FAST_STEP_MS) } else { FLASH_MS };
                         self.flash_until = Some(now + std::time::Duration::from_millis(dur));
@@ -229,7 +233,9 @@ impl App {
                         return;
                     }
                     EffectKind::Glitch(ms) => {
-                        self.glitch_until = Some(now + std::time::Duration::from_millis(ms as u64));
+                        if !self.engine.reduced_effects() {
+                            self.glitch_until = Some(now + std::time::Duration::from_millis(ms as u64));
+                        }
                         // non-blocking: keep revealing
                     }
                     EffectKind::Mood(m) => {
@@ -321,6 +327,11 @@ impl App {
                 self.engine.set_skip(!s);
                 self.dirty = true; // persist the skip-mode setting
             }
+            Key::F3 => {
+                let r = self.engine.reduced_effects();
+                self.engine.set_reduced_effects(!r);
+                self.dirty = true; // persist the accessibility setting
+            }
             Key::Up => {
                 self.user_scrolled = true;
                 self.scroll = self.scroll.saturating_sub(1);
@@ -363,6 +374,9 @@ impl App {
     }
     pub fn mood(&self) -> Mood {
         self.mood
+    }
+    pub fn reduced_effects(&self) -> bool {
+        self.engine.reduced_effects()
     }
 
     pub fn tab(&self) -> Tab {
@@ -714,5 +728,36 @@ mod tests {
         assert_eq!(app.mood(), Mood::RedAlert);
         app.submit_for_test("go"); // re-enqueue -> reset
         assert_eq!(app.mood(), Mood::Normal);
+    }
+
+    #[test]
+    fn f3_toggles_reduced_effects_and_marks_dirty() {
+        let mut app = app_fixture();
+        assert!(!app.reduced_effects());
+        app.key(Key::F3);
+        assert!(app.reduced_effects());
+        assert!(app.dirty());
+    }
+
+    #[test]
+    fn reduced_effects_suppresses_flash_block() {
+        use smobb_core::content;
+        use smobb_core::engine::Engine;
+        use web_time::Instant;
+        let c = content::from_str(&[r#"ContentPart(
+            locations: { "hub": ( prompt:[Line(Smobb,"P")],
+                commands: [ Branch(keys:["go"], target: Steps([ Effect(Flash(Red)), Line(Ali,"after"), Return ])) ] ) },
+            scenes: {},
+        )"#]);
+        let mut engine = Engine::new(c);
+        engine.set_skip(true);
+        engine.set_reduced_effects(true);
+        let mut app = App::new(engine);
+        let t0 = Instant::now();
+        app.tick(t0);
+        app.submit_for_test("go");
+        app.tick(t0);
+        assert!(app.flash().is_none(), "no flash under reduced effects");
+        assert!(app.transcript().iter().any(|s| s.text == "after"), "no block under reduced effects");
     }
 }

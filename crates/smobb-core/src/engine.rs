@@ -109,6 +109,7 @@ pub struct Engine {
     visited: std::collections::BTreeSet<String>,
     asked: std::collections::BTreeMap<String, std::collections::BTreeSet<String>>,
     decoding_unlocked: bool,
+    reduced_effects: bool,
 }
 
 impl Engine {
@@ -127,6 +128,7 @@ impl Engine {
             visited: std::collections::BTreeSet::new(),
             asked: std::collections::BTreeMap::new(),
             decoding_unlocked: false,
+            reduced_effects: false,
         }
     }
 
@@ -141,6 +143,12 @@ impl Engine {
     }
     pub fn interval(&self) -> u32 {
         self.interval_ms
+    }
+    pub fn reduced_effects(&self) -> bool {
+        self.reduced_effects
+    }
+    pub fn set_reduced_effects(&mut self, on: bool) {
+        self.reduced_effects = on;
     }
 
     /// Export player progress (journal + settings) for persistence.
@@ -158,6 +166,7 @@ impl Engine {
             skip: self.skip,
             interval_ms: self.interval_ms,
             decoding_unlocked: self.decoding_unlocked,
+            reduced_effects: self.reduced_effects,
         }
     }
 
@@ -175,6 +184,7 @@ impl Engine {
         self.skip = s.skip;
         self.interval_ms = s.interval_ms;
         self.decoding_unlocked = s.decoding_unlocked;
+        self.reduced_effects = s.reduced_effects;
     }
 
     pub fn start(&mut self) -> Vec<Output> {
@@ -1342,5 +1352,18 @@ mod tests {
         let _ = e.start();
         let out = e.advance("go");
         assert!(out.iter().any(|o| matches!(o, Output::Effect(EffectKind::Flash(_)))));
+    }
+
+    #[test]
+    fn reduced_effects_round_trips_through_snapshot() {
+        use crate::content;
+        let mut e = Engine::new(content::from_str(&[r#"ContentPart(locations:{"hub":(commands:[])},scenes:{})"#]));
+        e.set_reduced_effects(true);
+        let snap = e.snapshot();
+        assert!(snap.reduced_effects);
+        let snap2 = crate::save::SaveState::from_json(&snap.to_json()).unwrap();
+        let mut e2 = Engine::new(content::from_str(&[r#"ContentPart(locations:{"hub":(commands:[])},scenes:{})"#]));
+        e2.restore(snap2);
+        assert!(e2.reduced_effects());
     }
 }

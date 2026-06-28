@@ -38,6 +38,9 @@ pub struct SaveState {
     /// Whether the player has learned Jaffar's lines are hex (auto-translate on).
     #[serde(default)]
     pub decoding_unlocked: bool,
+    /// Accessibility: disable motion-heavy effects (flash/glitch).
+    #[serde(default)]
+    pub reduced_effects: bool,
 }
 
 impl Default for SaveState {
@@ -51,6 +54,7 @@ impl Default for SaveState {
             skip: false,
             interval_ms: default_interval(), // match the serde default (not u32's 0)
             decoding_unlocked: false,
+            reduced_effects: false,
         }
     }
 }

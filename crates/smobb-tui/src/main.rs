@@ -23,6 +23,7 @@ fn to_key(k: &KeyEvent) -> Option<Key> {
         KeyCode::Tab => Key::Tab,
         KeyCode::F(1) => Key::F1,
         KeyCode::F(2) => Key::F2,
+        KeyCode::F(3) => Key::F3,
         KeyCode::Up => Key::Up,
         KeyCode::Down => Key::Down,
         KeyCode::PageUp => Key::PageUp,
@@ -103,7 +104,7 @@ fn run(terminal: &mut ratatui::DefaultTerminal, app: &mut App) -> std::io::Resul
                         let now = Instant::now();
                         // extra guard: terminals without enhancement report
                         // auto-repeat as fresh Presses, so debounce the toggles
-                        let toggling = matches!(key, Key::F1 | Key::F2);
+                        let toggling = matches!(key, Key::F1 | Key::F2 | Key::F3);
                         let recent = toggling
                             && matches!(last_toggle, Some((lk, lt))
                                 if lk == key && now.duration_since(lt) < debounce);
