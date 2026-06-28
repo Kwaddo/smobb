@@ -9,6 +9,24 @@ use ratatui::{
 use smobb_core::engine::Output;
 use smobb_core::speaker::Color;
 
+const GLITCH_GLYPHS: &[char] = &['#', '%', '@', '&', '░', '▒', '▓', '*'];
+
+/// Deterministically corrupt ~1/3 of glyphs (no RNG — seeded by position).
+pub fn scramble(s: &str, seed: usize) -> String {
+    s.chars()
+        .enumerate()
+        .map(|(i, c)| {
+            if c.is_whitespace() {
+                c
+            } else if (i + seed) % 3 == 0 {
+                GLITCH_GLYPHS[(i + seed) % GLITCH_GLYPHS.len()]
+            } else {
+                c
+            }
+        })
+        .collect()
+}
+
 fn to_rgb(c: Color) -> RColor {
     let hex = c.hex(); // "#rrggbb"
     let r = hex
@@ -49,11 +67,13 @@ pub fn sidebar_line(o: &Output) -> Line<'static> {
 /// Build the transcript as ratatui lines, inserting a dim speaker header line
 /// (and a blank spacer) whenever the speaker changes. `System`/`None` lines get
 /// no header. This breaks the wall of same-color text into readable turns.
-pub fn story_lines(transcript: &[crate::app::Span]) -> Vec<Line<'static>> {
+/// When `glitch` is true, the last transcript line is scrambled.
+pub fn story_lines(transcript: &[crate::app::Span], glitch: bool) -> Vec<Line<'static>> {
     use smobb_core::speaker::Speaker;
+    let last = transcript.len().saturating_sub(1);
     let mut lines: Vec<Line<'static>> = Vec::new();
     let mut prev: Option<Speaker> = None;
-    for s in transcript {
+    for (idx, s) in transcript.iter().enumerate() {
         let label = s.speaker.map(|sp| sp.label()).unwrap_or("");
         let changed = s.speaker.is_some() && s.speaker != prev && !label.is_empty();
         if changed {
@@ -69,7 +89,12 @@ pub fn story_lines(transcript: &[crate::app::Span]) -> Vec<Line<'static>> {
         if s.dim {
             style = style.add_modifier(Modifier::DIM).fg(RColor::Rgb(160, 160, 160));
         }
-        lines.push(Line::from(RSpan::styled(s.text.clone(), style)));
+        let text = if glitch && idx == last {
+            scramble(&s.text, idx)
+        } else {
+            s.text.clone()
+        };
+        lines.push(Line::from(RSpan::styled(text, style)));
         if s.speaker.is_some() && !label.is_empty() {
             prev = s.speaker;
         }
@@ -162,12 +187,24 @@ pub fn render(f: &mut Frame, app: &App) {
     }
 
     // story transcript
-    let story_lines: Vec<Line> = story_lines(app.transcript());
+    let story_lines: Vec<Line> = story_lines(app.transcript(), app.glitch());
+    let bg = if let Some(tone) = app.flash() {
+        to_rgb(tone)
+    } else {
+        match app.mood() {
+            smobb_core::effect::Mood::RedAlert => RColor::Rgb(24, 0, 0),
+            smobb_core::effect::Mood::ColdCyan => RColor::Rgb(0, 14, 22),
+            smobb_core::effect::Mood::Corruption => RColor::Rgb(0, 18, 0),
+            smobb_core::effect::Mood::Normal => RColor::Reset,
+        }
+    };
 
     // Build paragraph without block first so line_count reflects only content lines.
     let story_inner_w = story_area.width.saturating_sub(2); // minus borders
     let story_inner_h = story_area.height.saturating_sub(2);
-    let story_base = Paragraph::new(story_lines).wrap(Wrap { trim: false });
+    let story_base = Paragraph::new(story_lines)
+        .wrap(Wrap { trim: false })
+        .style(Style::default().bg(bg));
     let total = story_base.line_count(story_inner_w) as u16;
     let max_scroll = total.saturating_sub(story_inner_h);
     let y = if app.user_scrolled() {
@@ -217,7 +254,7 @@ mod tests {
             Span { text: "there".into(), color: Color::Aqua, dim: false, speaker: Some(Speaker::Ali) },
             Span { text: "YO".into(), color: Color::Salmon, dim: false, speaker: Some(Speaker::Bader) },
         ];
-        let lines = super::story_lines(&t);
+        let lines = super::story_lines(&t, false);
         let flat: Vec<String> = lines
             .iter()
             .map(|l| l.spans.iter().map(|s| s.content.to_string()).collect::<String>())
@@ -235,7 +272,7 @@ mod tests {
             Span { text: "SYSTEM MSG".into(), color: Color::White, dim: false, speaker: Some(Speaker::System) },
             Span { text: "again".into(), color: Color::Aqua, dim: false, speaker: Some(Speaker::Ali) },
         ];
-        let lines = super::story_lines(&t);
+        let lines = super::story_lines(&t, false);
         let flat: Vec<String> = lines
             .iter()
             .map(|l| l.spans.iter().map(|s| s.content.to_string()).collect::<String>())
@@ -339,6 +376,14 @@ mod tests {
     #[test]
     fn banner_lines_zero_height_is_empty() {
         assert!(super::banner_lines("SELF", 0).is_empty());
+    }
+
+    #[test]
+    fn scramble_preserves_length_and_corrupts() {
+        let s = "hello world";
+        let g = super::scramble(s, 3);
+        assert_eq!(g.chars().count(), s.chars().count());
+        assert_ne!(g, s);
     }
 
     #[test]
