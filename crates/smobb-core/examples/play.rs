@@ -6,7 +6,7 @@ use std::{thread, time::Duration};
 fn render(out: &[Output], e: &Engine) -> bool {
     for o in out {
         match o {
-            Output::Line { text, color } => println!("{}{}\u{1b}[0m", color.ansi(), text),
+            Output::Line { text, color, .. } => println!("{}{}\u{1b}[0m", color.ansi(), text),
             Output::Translation(t) => println!("\u{1b}[2m  \u{21b7} \"{}\"\u{1b}[0m", t),
             Output::Sleep(ms) => thread::sleep(Duration::from_millis(*ms as u64)),
             Output::Recap(_) => {}

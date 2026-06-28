@@ -1,5 +1,5 @@
 use crate::scene::{Content, Step, Target};
-use crate::speaker::Color;
+use crate::speaker::{Color, Speaker};
 
 /// Default delay between revealed lines in normal (non-skip) pacing, in ms.
 /// Tuned down from the Java original's 4250 for a snappier read; skip-mode and
@@ -56,7 +56,7 @@ fn structural_label(key: &str) -> String {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Output {
-    Line { text: String, color: Color },
+    Line { text: String, color: Color, speaker: Option<Speaker> },
     Sleep(u32),
     AwaitInput,
     Recap(String),
@@ -213,6 +213,7 @@ impl Engine {
                     out.push(Output::Line {
                         text: text.clone(),
                         color: sp.color(),
+                        speaker: Some(*sp),
                     });
                     if !self.skip {
                         out.push(Output::Sleep(self.interval_ms));
@@ -230,6 +231,7 @@ impl Engine {
             Step::Line(sp, text) => out.push(Output::Line {
                 text: text.clone(),
                 color: sp.color(),
+                speaker: Some(*sp),
             }),
             Step::Effect(k) => out.push(Output::Effect(k.clone())),
             _ => {}
@@ -323,12 +325,14 @@ impl Engine {
                 return vec![Output::Line {
                     text: "(no options)".into(),
                     color: c,
+                    speaker: None,
                 }]
             }
         };
         let mut out = vec![Output::Line {
             text: "You can:".into(),
             color: c,
+            speaker: None,
         }];
         let mut seen = std::collections::BTreeSet::new();
         for b in &loc.commands {
@@ -337,6 +341,7 @@ impl Engine {
                     out.push(Output::Line {
                         text: format!("  - {}", label),
                         color: c,
+                        speaker: None,
                     });
                 }
             }
@@ -356,10 +361,12 @@ impl Engine {
         out.push(Output::Line {
             text: "Known passwords (try these):".into(),
             color: c,
+            speaker: None,
         });
         out.push(Output::Line {
             text: known,
             color: c,
+            speaker: None,
         });
         out
     }
@@ -453,6 +460,7 @@ impl Engine {
                     out.push(Output::Line {
                         text: text.clone(),
                         color: sp.color(),
+                        speaker: Some(sp),
                     });
                     // Only auto-translate Jaffar's hex once the player has learned
                     // it's encoded (see Step::UnlockDecode). Until then it reads as
@@ -542,6 +550,7 @@ impl Engine {
             out.push(Output::Line {
                 text: ".".into(),
                 color: crate::speaker::Color::White,
+                speaker: None,
             });
             // The dramatic beat honors skip-mode: with skip on, the dots still
             // print but without the wait, so skipping never stalls on a pause.
@@ -571,22 +580,26 @@ impl Engine {
         out.push(Output::Line {
             text: "== JOURNAL ==".into(),
             color: c,
+            speaker: None,
         });
 
         out.push(Output::Line {
             text: "[Clues]".into(),
             color: c,
+            speaker: None,
         });
         if self.recap.entries().is_empty() {
             out.push(Output::Line {
                 text: "  (none yet)".into(),
                 color: c,
+                speaker: None,
             });
         } else {
             for e in self.recap.entries() {
                 out.push(Output::Line {
                     text: format!("  - {}", e),
                     color: c,
+                    speaker: None,
                 });
             }
         }
@@ -594,17 +607,20 @@ impl Engine {
         out.push(Output::Line {
             text: "[Passwords]".into(),
             color: c,
+            speaker: None,
         });
         if self.discovered.is_empty() {
             out.push(Output::Line {
                 text: "  (none yet)".into(),
                 color: c,
+                speaker: None,
             });
         } else {
             for p in &self.discovered {
                 out.push(Output::Line {
                     text: format!("  - {}", p),
                     color: c,
+                    speaker: None,
                 });
             }
         }
@@ -612,17 +628,20 @@ impl Engine {
         out.push(Output::Line {
             text: "[People]".into(),
             color: c,
+            speaker: None,
         });
         if self.visited.is_empty() {
             out.push(Output::Line {
                 text: "  (none yet)".into(),
                 color: c,
+                speaker: None,
             });
         } else {
             for v in &self.visited {
                 out.push(Output::Line {
                     text: format!("  - {}", display_name(v)),
                     color: c,
+                    speaker: None,
                 });
             }
         }
@@ -630,11 +649,13 @@ impl Engine {
         out.push(Output::Line {
             text: "[Asked]".into(),
             color: c,
+            speaker: None,
         });
         if self.asked.is_empty() {
             out.push(Output::Line {
                 text: "  (none yet)".into(),
                 color: c,
+                speaker: None,
             });
         } else {
             for (loc, topics) in &self.asked {
@@ -642,6 +663,7 @@ impl Engine {
                 out.push(Output::Line {
                     text: format!("  {}: {}", display_name(loc), list),
                     color: c,
+                    speaker: None,
                 });
             }
         }
@@ -649,17 +671,20 @@ impl Engine {
         out.push(Output::Line {
             text: "[Decoded]".into(),
             color: c,
+            speaker: None,
         });
         if self.decoded.is_empty() {
             out.push(Output::Line {
                 text: "  (none yet)".into(),
                 color: c,
+                speaker: None,
             });
         } else {
             for (h, p) in &self.decoded {
                 out.push(Output::Line {
                     text: format!("  - {} \u{2192} {}", h, p),
                     color: c,
+                    speaker: None,
                 });
             }
         }
@@ -673,6 +698,7 @@ impl Engine {
             return vec![Output::Line {
                 text: "(empty)".into(),
                 color: c,
+                speaker: None,
             }];
         }
         self.recap
@@ -681,6 +707,7 @@ impl Engine {
             .map(|t| Output::Line {
                 text: t.clone(),
                 color: c,
+                speaker: None,
             })
             .collect()
     }
@@ -1282,6 +1309,23 @@ mod tests {
         let _ = e.start();
         let _ = e.advance("7549009");
         assert!(e.discovered().contains("7549009"));
+    }
+
+    #[test]
+    fn dialogue_line_carries_speaker_journal_line_does_not() {
+        use crate::content;
+        use crate::speaker::Speaker;
+        let c = content::from_str(&[r#"ContentPart(
+            locations: { "hub": ( prompt:[Line(Smobb,"P")],
+                commands: [ Branch(keys:["go"], target: Steps([ Line(Ali,"hi"), Return ])) ] ) },
+            scenes: {},
+        )"#]);
+        let mut e = Engine::new(c);
+        e.set_skip(true);
+        let _ = e.start();
+        let out = e.advance("go");
+        assert!(out.iter().any(|o| matches!(o, Output::Line { speaker: Some(Speaker::Ali), .. })));
+        assert!(e.journal_view().iter().all(|o| matches!(o, Output::Line { speaker: None, .. })));
     }
 
     #[test]

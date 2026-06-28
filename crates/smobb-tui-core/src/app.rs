@@ -148,7 +148,7 @@ impl App {
                 }
             };
             match item {
-                Output::Line { text, color } => {
+                Output::Line { text, color, .. } => {
                     self.transcript.push(Span {
                         text,
                         color,
@@ -189,6 +189,9 @@ impl App {
                     self.quit = true;
                     return;
                 }
+                Output::Effect(_) => {
+                    self.reveal_at = None;
+                }
             }
         }
     }
@@ -213,7 +216,7 @@ impl App {
         self.reveal_at = None;
         while let Some(item) = self.queue.pop_front() {
             match item {
-                Output::Line { text, color } => self.transcript.push(Span {
+                Output::Line { text, color, .. } => self.transcript.push(Span {
                     text,
                     color,
                     dim: false,
@@ -237,6 +240,7 @@ impl App {
                     self.quit = true;
                     return;
                 }
+                Output::Effect(_) => {} // ignored until Task 5
             }
         }
     }

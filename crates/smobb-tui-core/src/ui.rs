@@ -29,7 +29,7 @@ fn to_rgb(c: Color) -> RColor {
 fn output_lines_to_text(outs: &[Output]) -> Vec<Line<'static>> {
     outs.iter()
         .filter_map(|o| match o {
-            Output::Line { text, color } => Some(Line::from(RSpan::styled(
+            Output::Line { text, color, .. } => Some(Line::from(RSpan::styled(
                 text.clone(),
                 Style::default().fg(to_rgb(*color)),
             ))),
