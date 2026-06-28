@@ -146,9 +146,28 @@ mod tests {
             .iter()
             .map(|l| l.spans.iter().map(|s| s.content.to_string()).collect::<String>())
             .collect();
+        // exact layout: header, two same-speaker lines, blank spacer, header, line
+        assert_eq!(flat, vec!["ALI", "hi", "there", "", "BADER", "YO"]);
+    }
+
+    #[test]
+    fn system_interjection_keeps_one_header() {
+        use crate::app::Span;
+        use smobb_core::speaker::{Color, Speaker};
+        let t = vec![
+            Span { text: "hi".into(), color: Color::Aqua, dim: false, speaker: Some(Speaker::Ali) },
+            Span { text: "SYSTEM MSG".into(), color: Color::White, dim: false, speaker: Some(Speaker::System) },
+            Span { text: "again".into(), color: Color::Aqua, dim: false, speaker: Some(Speaker::Ali) },
+        ];
+        let lines = super::story_lines(&t);
+        let flat: Vec<String> = lines
+            .iter()
+            .map(|l| l.spans.iter().map(|s| s.content.to_string()).collect::<String>())
+            .collect();
+        // System has an empty label, so it renders as a plain line and does NOT
+        // reset grouping: only one "ALI" header, no spacer before the second Ali line.
+        assert_eq!(flat, vec!["ALI", "hi", "SYSTEM MSG", "again"]);
         assert_eq!(flat.iter().filter(|s| s.trim() == "ALI").count(), 1);
-        assert_eq!(flat.iter().filter(|s| s.trim() == "BADER").count(), 1);
-        assert!(flat.iter().any(|s| s.contains("there")));
     }
 
     #[test]
