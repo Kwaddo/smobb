@@ -2,13 +2,37 @@ use serde::Deserialize;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize)]
 pub enum Speaker {
-    Ali, Bader, BaderMc, Bevil, Hasan, Josh, JoshMc, Qassim, Smobb, Jaffar, Mavis, System,
+    Ali,
+    Bader,
+    BaderMc,
+    Bevil,
+    Hasan,
+    Josh,
+    JoshMc,
+    Qassim,
+    Smobb,
+    Jaffar,
+    Mavis,
+    System,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Color {
-    Black, Red, Green, Yellow, Blue, Purple, Cyan, Aqua, White,
-    Salmon, Salmon2, Gold, LightGreen, Silver, Aquamarine,
+    Black,
+    Red,
+    Green,
+    Yellow,
+    Blue,
+    Purple,
+    Cyan,
+    Aqua,
+    White,
+    Salmon,
+    Salmon2,
+    Gold,
+    LightGreen,
+    Silver,
+    Aquamarine,
 }
 
 impl Speaker {

@@ -1,0 +1,24 @@
+# Rust build output
+/target/
+**/*.rs.bk
+
+# Web (trunk) build output
+/crates/smobb-web/dist/
+
+# Player save file (runtime, per-player — written next to the binary)
+smobb-save.json
+
+# Subagent-driven-development scratch ledger (regenerable from git log)
+.superpowers/
+
+# Cargo.lock is committed — this is an application/binary, not a library.
+
+# macOS
+.DS_Store
+
+# IDE / editor
+*.swp
+*~
+.vscode/
+# Note: SMOBB.iml is already tracked (legacy IntelliJ project); .idea/ left ignored.
+.idea/

@@ -1,6 +1,6 @@
+use crate::speaker::Speaker;
 use serde::Deserialize;
 use std::collections::HashMap;
-use crate::speaker::Speaker;
 
 #[derive(Debug, Clone, Deserialize)]
 pub enum Step {
@@ -12,6 +12,9 @@ pub enum Step {
     Return,
     Enter(String),
     Quit,
+    /// Reveals that Jaffar's red lines are hexadecimal. Until a scene plays this,
+    /// his hex shows raw (gibberish); afterwards the engine auto-translates it.
+    UnlockDecode,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -70,7 +73,10 @@ Scene(steps: [
         let s: Scene = ron::from_str(SAMPLE).unwrap();
         assert_eq!(s.steps.len(), 5);
         match &s.steps[0] {
-            Step::Line(sp, t) => { assert_eq!(*sp, Speaker::Ali); assert_eq!(t, "hello"); }
+            Step::Line(sp, t) => {
+                assert_eq!(*sp, Speaker::Ali);
+                assert_eq!(t, "hello");
+            }
             _ => panic!("expected Line"),
         }
         match &s.steps[3] {

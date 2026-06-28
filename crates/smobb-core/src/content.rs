@@ -1,5 +1,5 @@
-use serde::Deserialize;
 use crate::scene::{Content, Location, Scene};
+use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
 struct ContentPart {
@@ -13,12 +13,16 @@ pub fn from_str(parts: &[&str]) -> Content {
     let mut locations = std::collections::HashMap::new();
     let mut scenes = std::collections::HashMap::new();
     for p in parts {
-        let part: ContentPart = ron::from_str(p)
-            .unwrap_or_else(|e| panic!("content parse error: {e}"));
+        let part: ContentPart =
+            ron::from_str(p).unwrap_or_else(|e| panic!("content parse error: {e}"));
         locations.extend(part.locations);
         scenes.extend(part.scenes);
     }
-    Content { start: "hub".to_string(), locations, scenes }
+    Content {
+        start: "hub".to_string(),
+        locations,
+        scenes,
+    }
 }
 
 /// Embeds every content/*.ron at build time. New files MUST be added here.

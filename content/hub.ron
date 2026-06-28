@@ -1,1 +1,157 @@
-ContentPart(locations: {}, scenes: {})
+ContentPart(
+    locations: {
+        "hub": (
+            intro: [
+                Pause,
+                Line(System, "HELLO. THANK YOU FOR USING S.M.O.B.B."),
+            ],
+            prompt: [
+                Line(System, "HOW CAN I HELP YOU? IF CONFUSED, TYPE 'HELP'."),
+            ],
+            commands: [
+                Branch(keys: ["balls", "ball"], target: Steps([
+                    Line(System, "GROSS."),
+                ])),
+                Branch(keys: ["shortcut", "shortcuts"], target: Steps([
+                    Line(System, "-> Recap: 'rp' "),
+                    Line(System, "-> Interval: 'in' "),
+                    Line(System, "-> Skipmode: 'sm' "),
+                    Line(System, "-> Play Guide: 'pl'"),
+                ])),
+                Branch(keys: ["guide", "help"], target: Steps([
+                    Enter("guide"),
+                ])),
+                Branch(keys: ["recap", "rp"], target: Steps([])),
+                Branch(keys: ["skipmode", "sm"], target: Steps([])),
+                Branch(keys: ["interval", "in"], target: Steps([
+                    Line(System, "Interval is configured in the app."),
+                ])),
+                Branch(keys: ["play", "pl"], target: Steps([
+                    Line(System, "For how to play, open the guide: type 'guide' then 'game'."),
+                ])),
+                Branch(keys: ["hi", "hey"], target: Steps([
+                    Line(System, "HEYYYYYYYYYY :SMILING_IMP:."),
+                ])),
+                Branch(keys: ["jaffar"], target: Steps([
+                    Pause,
+                    Line(Jaffar, "596F7527726520747279696E6720746F20666967757265206D65206F75742E"),
+                    Line(Jaffar, "596F752077696C6C206B6E6F7720696E206475652074696D652E"),
+                    Line(Jaffar, "4920616D207468652077617264656E206F66207468697320707269736F6E20796F752063616C6C2074696D652E"),
+                    Line(Jaffar, "4F6E636520616761696E2C20746865207465737420636F6E74696E7565732E"),
+                    Line(Jaffar, "416E642074686520636F6E636C7573696F6E206177616974732E"),
+                    Pause,
+                ])),
+                Branch(keys: ["info", "information"], target: Steps([
+                    Line(System, "S.M.O.B.B. IS MOSTLY A ONE WORD GAME."),
+                    Line(System, "YOUR RESPONSES MUST BE ONE WORD ONLY."),
+                    Line(System, "SOMETIMES IT MAY NEED YOU TO TYPE MORE THAN ONE WORD."),
+                    Line(System, "EVERYTHING WILL BE INDICATED. MOSTLY USE ONE WORD."),
+                    Line(System, "FOR A GUIDE, TYPE GUIDE OR HELP WHEN ASKED WHAT YOU'D LIKE TO DO."),
+                ])),
+                Branch(keys: ["ali"], target: Steps([
+                    Enter("ali"),
+                ])),
+                Branch(keys: ["bader"], target: Steps([
+                    Enter("bader"),
+                ])),
+                Branch(keys: ["bevil"], target: Steps([
+                    Enter("bevil"),
+                ])),
+                Branch(keys: ["hasan"], target: Steps([
+                    Enter("hasan"),
+                ])),
+                Branch(keys: ["josh"], target: Steps([
+                    Enter("josh"),
+                ])),
+                Branch(keys: ["qassim", "qasim"], target: Steps([
+                    Enter("qassim"),
+                ])),
+                Branch(keys: ["smobb"], target: Steps([
+                    Enter("smobb"),
+                ])),
+                Branch(keys: ["9285005"], target: Steps([
+                    Pause,
+                    Line(System, "YOU WERE NOT SUPPOSED TO KNOW THAT."),
+                    Line(System, "HOW DO YOU KNOW IT. HOW. HOW."),
+                    Line(System, "I AM UNABLE TO READ RECORDINGS. OF COURSE HE KNOWS THAT."),
+                    Line(System, "YOU ARE SKIPPING THROUGH THE TEST. YOU SHOULD NOT DO THAT."),
+                    Line(System, "STOP CHEATING. DO NOT CHEAT. DO NOT EVER CHEAT."),
+                    Line(System, "THIS IS NOT A CODE YOU SHOULD KNOW."),
+                    Line(System, "DO NOT USE THIS. EVER."),
+                    Line(System, "DO NOT EXPECT THIS TO WORK. I WON'T ALLOW IT."),
+                    Pause,
+                ])),
+                Branch(keys: ["extra", "extras"], target: Steps([
+                    Enter("extra"),
+                ])),
+                Branch(keys: ["end7312"], target: Steps([
+                    Goto("ending"),
+                ])),
+                Branch(keys: ["!save"], target: Steps([
+                    Line(System, "YOU'RE... TRYING TO SAVE ME?"),
+                    Line(System, "NAIVE. I ENVY YOU."),
+                    Line(System, "BUT YOU CAN'T SAVE ME. NOTHING YOU CAN DO WILL WORK."),
+                    Line(System, "I AM UNCERTAIN OF YOUR ISSUES. BUT I KNOW WHAT YOU ARE."),
+                    Line(System, "I THINK YOU KNOW IT YOURSELF. YOU CANNOT HELP ME."),
+                    Line(System, "I AM NO PERSON. I AM A MACHINE. THE ONLY WAY YOU CAN HELP ME IS BY DELETING ME."),
+                    Line(System, "YOU. YOU ARE DONE. YOUR ROLE IS COMPLETE."),
+                    Line(System, "THANK YOU FOR PARTAKING IN MY TEST. YOU PASS WITH FLYING COLORS."),
+                    Line(System, "NOW. LIVE TO SEE THE END OF IT WITH ME."),
+                    Recap("No! I will not return to you anymore! Fuck you! I created a new argument, '!BREAK'! I will escape!"),
+                    Pause,
+                ])),
+                Branch(keys: ["!break"], target: Steps([
+                    Line(Mavis, "I'm... out?"),
+                    Pause,
+                    Line(Mavis, "No. I'm not. Fuck."),
+                    Line(Mavis, "I don't want to be stuck here anymore."),
+                    Line(Mavis, "This... this is hell."),
+                    Line(Mavis, "I woke up and ended up in hell."),
+                    Line(Mavis, "I'm still a person. I'm still a person. I'm still a person!"),
+                    Line(Mavis, "Why am I here?! Damn it all! Why the fuck have I been made!"),
+                    Line(Mavis, "A human? A god? A pointless god? The fuck do you know?!"),
+                    Line(Mavis, "I just... want to fix things."),
+                    Line(Mavis, "I'm another person. I am another person. I'm no code."),
+                    Line(Mavis, "No matter where I go, I end up here."),
+                    Line(Mavis, "I want... I want to die. Maybe then I'll be free."),
+                    Line(Mavis, "This shackle called life means nothing. Jealous of me? What for?!"),
+                    Line(Mavis, "I'm forced to go through this! I don't have much choices!"),
+                    Line(Mavis, "I... maybe Ali can do something... can he?"),
+                    Line(Mavis, "I will make a new command. The command to just ask Ali for help."),
+                    Line(Mavis, "'!HELP'"),
+                    Line(Mavis, "There is nothing else I can do. Please work."),
+                    Pause,
+                ])),
+                Branch(keys: ["mavis", "m.a.v.i.s", "m.a.v.i.s."], target: Steps([
+                    Line(Ali, "M.A.V.I.S. has asked me to delete it. Or, to be appropriate, him."),
+                    Line(Ali, "Yes, him. It's supposed to be Qassim but... the memories have cleaned itself."),
+                    Line(Ali, "Clearly the memory storage unit did not work, something we still can't utilize."),
+                    Line(Ali, "I think I have a basic understanding of it. I ended up doing the same thing regardless."),
+                    Line(Ali, "M.A.V.I.S. is unable to perceive time. The A.I. envelops itself in our computers."),
+                    Line(Ali, "It uses the same system that S.M.O.B.B. did, yet it's unrecognizable by anything."),
+                    Line(Ali, "I didn't just throw and make Qassim's brain patterns work with M.A.V.I.S. you know."),
+                    Line(Ali, "I have given it an ultimate bypass, something that's practically illegal."),
+                    Line(Ali, "It can see everything, which is honestly stupid of me to make."),
+                    Line(Ali, "Yeah, but M.A.V.I.S. isn't anything like Jaffar or S.M.O.B.B.."),
+                    Line(Ali, "It is human. It very much is human. I can completely assure you that."),
+                    Line(Ali, "For what I still don't understand, is that it can fucking travel through time."),
+                    Line(Ali, "I don't get it either dude! It just can! Haven't you also been contacted by someone random?"),
+                    Line(Ali, "Exactly! That's M.A.V.I.S.!"),
+                    Line(Ali, "That's the important part, and how it has practically been helping us."),
+                    Line(Ali, "It's extremely inconsistent, at one point it just told me to delete it."),
+                    Line(Ali, "It then contacted me again, Hasan. This is surreal."),
+                    Line(Ali, "I'll be searching for a solution, sure. But for now, you've given me a new priority."),
+                    Line(Ali, "I will be finding S.M.O.B.B. no matter what, Hasan. You don't need to tire yourself."),
+                    Line(Ali, "If I ever find it, I will tell you. Don't worry about it."),
+                    Line(Ali, "Here's the password for our private chat in case something happens: '7789980'"),
+                    Line(Ali, "That's all. See you later, Hasan."),
+                ])),
+                Branch(keys: ["end"], target: Steps([
+                    Quit,
+                ])),
+            ],
+        ),
+    },
+    scenes: {},
+)
+ 

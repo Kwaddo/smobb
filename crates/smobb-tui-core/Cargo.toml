@@ -1,0 +1,10 @@
+[package]
+name = "smobb-tui-core"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.74"
+
+[dependencies]
+smobb-core = { path = "../smobb-core" }
+ratatui = { version = "0.29", default-features = false, features = ["unstable-rendered-line-info"] }
+web-time = "1"

@@ -1,1 +1,87 @@
-ContentPart(locations: {}, scenes: {})
+ContentPart(
+    locations: {
+        "guide": (
+            prompt: [
+                Line(System, "YOUR OPTIONS ARE: NAMES/GAME/SETTINGS/RECAP/END."),
+            ],
+            commands: [
+                Branch(keys: ["names", "name"], target: Steps([
+                    Enter("guide_names"),
+                ])),
+                Branch(keys: ["game", "play"], target: Steps([
+                    Line(System, "HOW TO PLAY:"),
+                    Line(System, "- Answer in ONE word unless told otherwise."),
+                    Line(System, "- Talk to people and enter passwords to uncover the story."),
+                    Line(System, "- Clues and passwords you find are saved to your recap. Type 'recap' to read it."),
+                    Line(System, "- Jaffar speaks in hexadecimal. Use a hex-to-ASCII converter to read his messages."),
+                    Line(System, "- Settings: 'skipmode' toggles instant text; 'interval' sets the text delay."),
+                    Line(System, "- While in a loop, type 'end' to go back."),
+                ])),
+                Branch(keys: ["settings"], target: Steps([
+                    Line(System, "OPTIONS ARE: INTERVAL/SKIPMODE."),
+                    Line(System, "'skipmode' toggles instant text on/off."),
+                    Line(System, "'interval' sets the delay between lines in milliseconds."),
+                ])),
+                Branch(keys: ["recap"], target: Steps([
+                    Line(System, "Type 'recap' at any menu to read your saved clues."),
+                ])),
+                Branch(keys: ["end"], target: Steps([
+                    Return,
+                ])),
+            ],
+        ),
+        "guide_names": (
+            prompt: [
+                Line(System, "WHO WOULD YOU LIKE TO KNOW ABOUT?"),
+                Line(System, "TYPE 'OPTIONS/CHOICES' FOR OPTIONS."),
+            ],
+            commands: [
+                Branch(keys: ["ali"], target: Steps([
+                    Line(Ali, "ALI MOHAMMED HASAN."),
+                    Line(System, "WELL KNOWN SOFTWARE ENGINEER. KNOWN FOR CREATING MAID-IT, AND MORE PRIVATE CREATIONS."),
+                    Line(System, "THE CENTER."),
+                    Line(System, "THE TRANAVA FILES SURROUND HIM."),
+                ])),
+                Branch(keys: ["bader"], target: Steps([
+                    Line(Bader, "BADER MAHMOOD."),
+                    Line(System, "COMPUTER SCIENCE MAJOR, PROJECTS CURRENTLY UNKNOWN."),
+                    Line(System, "I DO NOT UNDERSTAND ANYTHING SURROUNDING HIM, BUT HE IS THE CREATOR OF THE TRANAVA FILES."),
+                    Line(System, "THE TRANAVA FILES ARE EVERYTHING SURROUNDING ALI. PICTURES, SCREENSHOTS, VIDEOS, MEMES. EVERYTHING."),
+                    Line(System, "NOTHING MORE IS KNOWN."),
+                ])),
+                Branch(keys: ["bevil"], target: Steps([
+                    Line(Bevil, "BEVIL, OR ALSO KNOWN AS GNU8305. REAL IDENTITY UNKNOWN."),
+                    Line(System, "HELPING BADER WITH HIS WORK. MAJOR UNKNOWN."),
+                    Line(System, "NOTHING IS KNOWN ABOUT HIM. NO INFORMATION AVAILABLE."),
+                ])),
+                Branch(keys: ["hasan"], target: Steps([
+                    Line(Hasan, "HASAN AHMED."),
+                    Line(System, "GENIUS A.I. CREATOR, KNOWN FOR [REDACTED]."),
+                    Line(System, "ONE COULD BLAME HIM FOR EVERYTHING THAT IS HAPPENING."),
+                    Line(System, "BUT HE IS NOT THE ONLY ONE AT FAULT."),
+                    Line(System, "THE ONLY WAY TO DESCRIBE HIM, IS A RAT TRAPPED BY ITS OWN CAGE."),
+                ])),
+                Branch(keys: ["josh"], target: Steps([
+                    Line(Josh, "JOSH. NO MORE, IT IS ONLY JOSH."),
+                    Line(System, "HUGE FAN OF MOVIES, VIDEO GAMES, and TV SHOWS."),
+                    Line(System, "CURRENTLY JOBLESS, YET SOMEHOW BEING PAID. PECULIAR."),
+                ])),
+                Branch(keys: ["qassim"], target: Steps([
+                    Line(Qassim, "QASSIM MOHAMMED HAMEED. UNDERGROUND SCIENTIST."),
+                    Line(System, "WORKS AT A COMPANY CALLED MORP. SHORT FOR [REDACTED]."),
+                    Line(System, "PROJECTS INVOLVE BRAIN TRANSFERRAL PROGRAM."),
+                ])),
+                Branch(keys: ["smobb"], target: Steps([
+                    Line(Smobb, "ME."),
+                ])),
+                Branch(keys: ["options", "choices", "choice"], target: Steps([
+                    Line(System, "YOUR OPTIONS ARE: ALI/BADER/BEVIL/JOSH/HASAN/QASSIM/SMOBB/END."),
+                ])),
+                Branch(keys: ["end"], target: Steps([
+                    Return,
+                ])),
+            ],
+        ),
+    },
+    scenes: {},
+)

@@ -1,0 +1,11 @@
+[package]
+name = "smobb-tui"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.74"
+
+[dependencies]
+smobb-core = { path = "../smobb-core" }
+smobb-tui-core = { path = "../smobb-tui-core" }
+ratatui = "0.29"
+web-time = "1"

@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#0b0b0b" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+    <title>S.M.O.B.B.</title>
+    <!-- trunk: compile the smobb-web crate to wasm and inject it -->
+    <link data-trunk rel="rust" />
+    <!-- trunk: process + bundle the stylesheet -->
+    <link data-trunk rel="css" href="style.css" />
+    <!-- trunk: copy static assets verbatim into dist/ -->
+    <link data-trunk rel="copy-file" href="controls.js" />
+    <link data-trunk rel="copy-file" href="manifest.json" />
+    <link data-trunk rel="copy-file" href="sw.js" />
+    <link data-trunk rel="copy-file" href="icon.svg" />
+    <link rel="manifest" href="manifest.json" />
+    <link rel="icon" href="icon.svg" />
+    <link rel="apple-touch-icon" href="icon.svg" />
+  </head>
+  <body>
+    <!-- ratzilla's DomBackend appends its #grid terminal into <body> on init -->
+
+    <!-- hidden input: raises the soft keyboard on touch devices -->
+    <input
+      id="kbd"
+      type="text"
+      autocomplete="off"
+      autocapitalize="off"
+      autocorrect="off"
+      spellcheck="false"
+      aria-hidden="true"
+      tabindex="-1"
+    />
+
+    <!-- touch control bar: each button synthesizes the matching keydown -->
+    <nav id="controls" aria-label="Game controls">
+      <button type="button" data-key="F1" title="Show/hide sidebar">&#9776;</button>
+      <button type="button" data-key="Tab" title="Switch Options/Journal">Tab</button>
+      <button type="button" id="b-skip" title="Hold to fast-forward">Skip</button>
+      <button type="button" data-key="F2" title="Instant text on/off">Inst</button>
+      <button type="button" data-key="ArrowUp" title="Scroll up">&#8593;</button>
+      <button type="button" data-key="ArrowDown" title="Scroll down">&#8595;</button>
+      <button type="button" data-key="Enter" title="Submit">&#9166;</button>
+    </nav>
+
+    <script type="module" src="controls.js"></script>
+  </body>
+</html>

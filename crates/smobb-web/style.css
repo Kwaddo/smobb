@@ -1,0 +1,89 @@
+:root {
+  --bg: #0b0b0b;
+  --fg: #d0d0d0;
+  --bar: #161616;
+  --bar-border: #333;
+  --btn: #222;
+  --btn-active: #3a3a3a;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: "Cascadia Code", "JetBrains Mono", "DejaVu Sans Mono", Menlo,
+    Consolas, monospace;
+  height: 100%;
+  overflow: hidden;
+}
+
+/* leave room for the fixed control bar */
+body {
+  padding-bottom: 56px;
+}
+
+/* ratzilla renders its terminal grid into this element (created at runtime) */
+#grid {
+  padding: 8px;
+  line-height: 1.0;
+  white-space: pre;
+}
+#grid pre {
+  margin: 0;
+}
+
+/* hidden input that summons the mobile soft keyboard */
+#kbd {
+  position: fixed;
+  left: -9999px;
+  top: 0;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  border: 0;
+  padding: 0;
+}
+
+/* touch control bar */
+#controls {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 52px;
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  background: var(--bar);
+  border-top: 1px solid var(--bar-border);
+  /* keep clear of iOS home indicator */
+  padding-bottom: calc(4px + env(safe-area-inset-bottom, 0px));
+}
+#controls button {
+  flex: 1 1 0;
+  min-width: 0;
+  background: var(--btn);
+  color: var(--fg);
+  border: 1px solid var(--bar-border);
+  border-radius: 6px;
+  font: inherit;
+  font-size: 16px;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+}
+#controls button:active,
+#controls button.active {
+  background: var(--btn-active);
+}
+
+/* on a real keyboard (wide viewport) the control bar is optional clutter;
+   keep it but make it slimmer */
+@media (min-width: 800px) {
+  #controls { height: 40px; opacity: 0.85; }
+  body { padding-bottom: 44px; }
+}
