@@ -15,6 +15,8 @@ pub enum Step {
     /// Reveals that Jaffar's red lines are hexadecimal. Until a scene plays this,
     /// his hex shows raw (gibberish); afterwards the engine auto-translates it.
     UnlockDecode,
+    /// Fire a dramatic effect at this point in the stream.
+    Effect(crate::effect::EffectKind),
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -86,5 +88,11 @@ Scene(steps: [
             }
             _ => panic!("expected Prompt"),
         }
+    }
+
+    #[test]
+    fn parses_effect_step() {
+        let s: Step = ron::from_str(r#"Effect(Banner("BOOM"))"#).unwrap();
+        assert!(matches!(s, Step::Effect(crate::effect::EffectKind::Banner(t)) if t == "BOOM"));
     }
 }

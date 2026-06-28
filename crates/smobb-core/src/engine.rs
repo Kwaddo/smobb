@@ -526,6 +526,9 @@ impl Engine {
                 Step::UnlockDecode => {
                     self.decoding_unlocked = true;
                 }
+                Step::Effect(_effect) => {
+                    // Effect processing to be implemented in a future task.
+                }
             }
         }
         out
