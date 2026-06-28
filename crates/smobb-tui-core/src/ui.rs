@@ -77,6 +77,36 @@ pub fn story_lines(transcript: &[crate::app::Span]) -> Vec<Line<'static>> {
     lines
 }
 
+/// Build a dramatic full-area banner: the text upper-cased and letter-spaced,
+/// vertically centered. `height` is the available story-area inner height.
+pub fn banner_lines(text: &str, height: u16) -> Vec<Line<'static>> {
+    let spaced: String = text
+        .to_uppercase()
+        .chars()
+        .collect::<Vec<_>>()
+        .chunks(1)
+        .map(|c| c.iter().collect::<String>())
+        .collect::<Vec<_>>()
+        .join(" ");
+    let mut lines: Vec<Line<'static>> = Vec::new();
+    let h = height as usize;
+    let pad = h.saturating_sub(1) / 2;
+    for _ in 0..pad {
+        lines.push(Line::from(""));
+    }
+    lines.push(
+        Line::from(RSpan::styled(
+            spaced,
+            Style::default().add_modifier(Modifier::BOLD),
+        ))
+        .alignment(ratatui::layout::Alignment::Center),
+    );
+    while (lines.len() as u16) < height {
+        lines.push(Line::from(""));
+    }
+    lines
+}
+
 pub fn render(f: &mut Frame, app: &App) {
     let outer = Block::bordered().title(" S.M.O.B.B. ");
     let area = f.area();
@@ -96,6 +126,37 @@ pub fn render(f: &mut Frame, app: &App) {
     } else {
         (body, None)
     };
+
+    if let Some(text) = app.banner() {
+        let tone = match app.mood() {
+            smobb_core::effect::Mood::RedAlert => RColor::Rgb(255, 60, 60),
+            smobb_core::effect::Mood::ColdCyan => RColor::Rgb(120, 220, 255),
+            smobb_core::effect::Mood::Corruption => RColor::Rgb(120, 255, 120),
+            smobb_core::effect::Mood::Normal => RColor::Rgb(255, 255, 255),
+        };
+        let inner_h = story_area.height.saturating_sub(2);
+        let banner = Paragraph::new(banner_lines(text, inner_h))
+            .style(Style::default().fg(tone))
+            .block(Block::bordered())
+            .alignment(ratatui::layout::Alignment::Center);
+        f.render_widget(banner, story_area);
+        // still render the sidebar so the layout doesn't jump
+        if let Some(sa) = sidebar_area {
+            let (title, outs) = match app.tab() {
+                crate::app::Tab::Options => (" OPTIONS ", app.options_lines()),
+                crate::app::Tab::Journal => (" JOURNAL ", app.journal_lines()),
+            };
+            let lines: Vec<Line> = outs.iter().map(sidebar_line).collect();
+            f.render_widget(
+                Paragraph::new(lines).wrap(Wrap { trim: false }).block(Block::bordered().title(title)),
+                sa,
+            );
+        }
+        // input line
+        let input = Paragraph::new(Line::from(format!("> {}", app.input())));
+        f.render_widget(input, input_area);
+        return;
+    }
 
     // story transcript
     let story_lines: Vec<Line> = story_lines(app.transcript());
@@ -257,6 +318,19 @@ mod tests {
         };
         assert!(bold(&h), "section header should be bold");
         assert!(!bold(&i), "list item should not be bold");
+    }
+
+    #[test]
+    fn banner_is_letterspaced_and_centered() {
+        let lines = super::banner_lines("SELF", 11);
+        let flat: Vec<String> = lines
+            .iter()
+            .map(|l| l.spans.iter().map(|s| s.content.to_string()).collect::<String>())
+            .collect();
+        // letter-spaced text present
+        assert!(flat.iter().any(|s| s.contains("S E L F")));
+        // vertically padded (more lines than just the text + box)
+        assert_eq!(lines.len(), 11);
     }
 
     #[test]
