@@ -1,5 +1,5 @@
 use smobb_core::engine::{Engine, Output};
-use smobb_core::speaker::Color;
+use smobb_core::speaker::{Color, Speaker};
 use std::collections::VecDeque;
 use web_time::Instant;
 
@@ -14,6 +14,7 @@ pub struct Span {
     pub text: String,
     pub color: Color,
     pub dim: bool,
+    pub speaker: Option<Speaker>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -148,12 +149,8 @@ impl App {
                 }
             };
             match item {
-                Output::Line { text, color, .. } => {
-                    self.transcript.push(Span {
-                        text,
-                        color,
-                        dim: false,
-                    });
+                Output::Line { text, color, speaker } => {
+                    self.transcript.push(Span { text, color, dim: false, speaker });
                     self.reveal_at = None;
                 }
                 Output::Translation(t) => {
@@ -161,6 +158,7 @@ impl App {
                         text: format!("  \u{21b7} \"{}\"", t),
                         color: Color::White,
                         dim: true,
+                        speaker: None,
                     });
                     self.reveal_at = None;
                 }
@@ -178,6 +176,7 @@ impl App {
                         text: "  \u{270e} noted".to_string(),
                         color: Color::White,
                         dim: true,
+                        speaker: None,
                     });
                     self.reveal_at = None;
                 }
@@ -216,20 +215,23 @@ impl App {
         self.reveal_at = None;
         while let Some(item) = self.queue.pop_front() {
             match item {
-                Output::Line { text, color, .. } => self.transcript.push(Span {
+                Output::Line { text, color, speaker } => self.transcript.push(Span {
                     text,
                     color,
                     dim: false,
+                    speaker,
                 }),
                 Output::Translation(t) => self.transcript.push(Span {
                     text: format!("  \u{21b7} \"{}\"", t),
                     color: Color::White,
                     dim: true,
+                    speaker: None,
                 }),
                 Output::Recap(_) => self.transcript.push(Span {
                     text: "  \u{270e} noted".to_string(),
                     color: Color::White,
                     dim: true,
+                    speaker: None,
                 }),
                 Output::Sleep(_) => {} // ignore timing
                 Output::AwaitInput => {

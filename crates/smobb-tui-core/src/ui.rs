@@ -38,6 +38,37 @@ fn output_lines_to_text(outs: &[Output]) -> Vec<Line<'static>> {
         .collect()
 }
 
+/// Build the transcript as ratatui lines, inserting a dim speaker header line
+/// (and a blank spacer) whenever the speaker changes. `System`/`None` lines get
+/// no header. This breaks the wall of same-color text into readable turns.
+pub fn story_lines(transcript: &[crate::app::Span]) -> Vec<Line<'static>> {
+    use smobb_core::speaker::Speaker;
+    let mut lines: Vec<Line<'static>> = Vec::new();
+    let mut prev: Option<Speaker> = None;
+    for s in transcript {
+        let label = s.speaker.map(|sp| sp.label()).unwrap_or("");
+        let changed = s.speaker.is_some() && s.speaker != prev && !label.is_empty();
+        if changed {
+            if !lines.is_empty() {
+                lines.push(Line::from(""));
+            }
+            lines.push(Line::from(RSpan::styled(
+                label.to_string(),
+                Style::default().fg(RColor::Rgb(120, 120, 120)).add_modifier(Modifier::DIM | Modifier::BOLD),
+            )));
+        }
+        let mut style = Style::default().fg(to_rgb(s.color));
+        if s.dim {
+            style = style.add_modifier(Modifier::DIM).fg(RColor::Rgb(160, 160, 160));
+        }
+        lines.push(Line::from(RSpan::styled(s.text.clone(), style)));
+        if s.speaker.is_some() && !label.is_empty() {
+            prev = s.speaker;
+        }
+    }
+    lines
+}
+
 pub fn render(f: &mut Frame, app: &App) {
     let outer = Block::bordered().title(" S.M.O.B.B. ");
     let area = f.area();
@@ -59,19 +90,7 @@ pub fn render(f: &mut Frame, app: &App) {
     };
 
     // story transcript
-    let story_lines: Vec<Line> = app
-        .transcript()
-        .iter()
-        .map(|s| {
-            let mut style = Style::default().fg(to_rgb(s.color));
-            if s.dim {
-                style = style
-                    .add_modifier(Modifier::DIM)
-                    .fg(RColor::Rgb(160, 160, 160));
-            }
-            Line::from(RSpan::styled(s.text.clone(), style))
-        })
-        .collect();
+    let story_lines: Vec<Line> = story_lines(app.transcript());
 
     // Build paragraph without block first so line_count reflects only content lines.
     let story_inner_w = story_area.width.saturating_sub(2); // minus borders
@@ -112,6 +131,25 @@ mod tests {
     use ratatui::{backend::TestBackend, Terminal};
     use smobb_core::content;
     use smobb_core::engine::Engine;
+
+    #[test]
+    fn speaker_change_inserts_one_header_per_turn() {
+        use crate::app::Span;
+        use smobb_core::speaker::{Color, Speaker};
+        let t = vec![
+            Span { text: "hi".into(), color: Color::Aqua, dim: false, speaker: Some(Speaker::Ali) },
+            Span { text: "there".into(), color: Color::Aqua, dim: false, speaker: Some(Speaker::Ali) },
+            Span { text: "YO".into(), color: Color::Salmon, dim: false, speaker: Some(Speaker::Bader) },
+        ];
+        let lines = super::story_lines(&t);
+        let flat: Vec<String> = lines
+            .iter()
+            .map(|l| l.spans.iter().map(|s| s.content.to_string()).collect::<String>())
+            .collect();
+        assert_eq!(flat.iter().filter(|s| s.trim() == "ALI").count(), 1);
+        assert_eq!(flat.iter().filter(|s| s.trim() == "BADER").count(), 1);
+        assert!(flat.iter().any(|s| s.contains("there")));
+    }
 
     #[test]
     fn auto_scrolls_to_latest_line() {

@@ -36,6 +36,22 @@ pub enum Color {
 }
 
 impl Speaker {
+    /// Short upper-case display label for the transcript turn header.
+    /// Empty for `System` (narration shows no header).
+    pub fn label(self) -> &'static str {
+        match self {
+            Speaker::Ali => "ALI",
+            Speaker::Bader | Speaker::BaderMc => "BADER",
+            Speaker::Bevil => "BEVIL",
+            Speaker::Hasan => "HASAN",
+            Speaker::Josh | Speaker::JoshMc => "JOSH",
+            Speaker::Qassim => "QASSIM",
+            Speaker::Smobb => "SMOBB",
+            Speaker::Jaffar => "JAFFAR",
+            Speaker::Mavis => "MAVIS",
+            Speaker::System => "",
+        }
+    }
     pub fn color(self) -> Color {
         match self {
             Speaker::Ali => Color::Aqua,
@@ -100,6 +116,13 @@ impl Color {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn speaker_labels() {
+        assert_eq!(Speaker::Ali.label(), "ALI");
+        assert_eq!(Speaker::Smobb.label(), "SMOBB");
+        assert_eq!(Speaker::BaderMc.label(), "BADER");
+        assert_eq!(Speaker::System.label(), ""); // system has no banner label
+    }
     #[test]
     fn speaker_colors_match_bits() {
         assert_eq!(Speaker::Ali.color(), Color::Aqua);
