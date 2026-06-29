@@ -20,12 +20,32 @@ Launches the interactive terminal UI for playing S.M.O.B.B.
 - **F1** — hide / show sidebar
 - **Hold Space** (or **Shift**) — fast-forward: rolls through lines quickly while held, normal pace on release. Space works everywhere; Shift also works on terminals with Kitty keyboard-protocol support. (Web: the on-screen Skip button.)
 - **F2** — toggle skip-mode (fully instant text, persists until toggled off). (Web: the on-screen Inst button.)
-- **↑/↓, PgUp/PgDn** — scroll through transcript
+- **←/→** — move scroll focus between the story (left) and the sidebar (right); the focused pane's border brightens. **Tab** also focuses the sidebar.
+- **↑/↓, PgUp/PgDn** — scroll the focused pane (transcript or the Journal/Options sidebar)
 - **`leave` / `exit`** — type at any prompt to back out of a dialogue or leave a location (the journal also notes everything you've already asked about)
 - **Enter** — submit command
 - **Esc** — quit
 
-**Saves:** progress (the journal — clues, passwords, asked topics, decoded hex, people — plus your settings) persists automatically. The desktop app writes `smobb-save.json` next to where you launch it; the web app uses the browser's `localStorage`. You restart at the hub with your notebook intact. Delete the save to start over.
+**Saves:** progress (the journal — clues, passwords, asked topics, decoded hex, people — plus your settings) persists automatically. The terminal app writes `smobb-save.json` next to where you launch it; the native window app writes it to the per-user data dir (`~/Library/Application Support/smobb/` on macOS, `%APPDATA%\smobb\` on Windows, `~/.local/share/smobb/` on Linux); the web app uses the browser's `localStorage`. You restart at the hub with your notebook intact. Delete the save to start over.
+
+### Native window app (standalone, no terminal)
+
+```
+cargo run -p smobb-desktop
+```
+
+Runs the same UI in its own GPU window (via [`ratatui-wgpu`](https://crates.io/crates/ratatui-wgpu) + winit) — no terminal involved. Cross-platform (macOS / Windows / Linux). On Windows, release builds open no console window.
+
+Build a double-clickable macOS `.app`:
+
+```
+cargo install cargo-bundle           # once
+cd crates/smobb-desktop
+cargo bundle --release               # builds the binary, wraps it, embeds the icon
+# -> target/release/bundle/osx/S.M.O.B.B..app   (and a .dmg)
+```
+
+(Run it from the crate directory — `cargo bundle --release -p smobb-desktop` from the workspace root builds the wrong package and skips the icon.)
 
 ### Headless play
 
@@ -52,7 +72,8 @@ On a phone, open the served page and "Add to Home Screen" — the web app manife
 
 - `crates/smobb-core` — pure engine (story as embedded RON data, no I/O).
 - `crates/smobb-tui-core` — portable ratatui App + rendering (no terminal backend).
-- `crates/smobb-tui` — native desktop terminal app (crossterm).
+- `crates/smobb-tui` — terminal app (crossterm).
+- `crates/smobb-desktop` — standalone native window app (ratatui-wgpu + winit), no terminal.
 - `crates/smobb-web` — browser/PWA frontend (ratzilla/WASM).
 
 ### Releases & deploy (GitHub Actions)

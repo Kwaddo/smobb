@@ -40,9 +40,18 @@ mod tests {
     fn maps_named_keys() {
         let m = ModifiersState::empty();
         assert_eq!(to_key(&WKey::Named(NamedKey::Enter), m), Some(Key::Enter));
-        assert_eq!(to_key(&WKey::Named(NamedKey::ArrowLeft), m), Some(Key::Left));
-        assert_eq!(to_key(&WKey::Named(NamedKey::ArrowRight), m), Some(Key::Right));
-        assert_eq!(to_key(&WKey::Named(NamedKey::Space), m), Some(Key::Char(' ')));
+        assert_eq!(
+            to_key(&WKey::Named(NamedKey::ArrowLeft), m),
+            Some(Key::Left)
+        );
+        assert_eq!(
+            to_key(&WKey::Named(NamedKey::ArrowRight), m),
+            Some(Key::Right)
+        );
+        assert_eq!(
+            to_key(&WKey::Named(NamedKey::Space), m),
+            Some(Key::Char(' '))
+        );
         assert_eq!(to_key(&WKey::Named(NamedKey::F2), m), Some(Key::F2));
     }
 

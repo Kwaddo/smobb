@@ -461,7 +461,12 @@ mod tests {
         use crate::app::{Focus, Key};
         // 20 distinct option labels (via Enter steps) -> tall Options sidebar.
         let branches: String = (1..=20)
-            .map(|i| format!(r#"Branch(keys:["k{0:02}"], target: Steps([ Enter("p{0:02}") ]))"#, i))
+            .map(|i| {
+                format!(
+                    r#"Branch(keys:["k{0:02}"], target: Steps([ Enter("p{0:02}") ]))"#,
+                    i
+                )
+            })
             .collect::<Vec<_>>()
             .join(", ");
         let locs: String = (1..=20)
@@ -492,7 +497,10 @@ mod tests {
             .iter()
             .map(|c| c.symbol())
             .collect();
-        assert!(dump.contains("You can:"), "top of sidebar visible before scrolling");
+        assert!(
+            dump.contains("You can:"),
+            "top of sidebar visible before scrolling"
+        );
 
         // Focus the sidebar and scroll well past the top.
         app.key(Key::Right);
@@ -509,7 +517,10 @@ mod tests {
             .map(|c| c.symbol())
             .collect();
         assert!(!dump.contains("You can:"), "scrolled past the top header");
-        assert!(dump.contains("- "), "still showing clamped option items, not blank");
+        assert!(
+            dump.contains("- "),
+            "still showing clamped option items, not blank"
+        );
     }
 
     #[test]

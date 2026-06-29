@@ -17,3 +17,4 @@ web-time = "1"
 [package.metadata.bundle]
 name = "S.M.O.B.B."
 identifier = "com.smobb.desktop"
+icon = ["assets/icon.icns"]
