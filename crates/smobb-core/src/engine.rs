@@ -9,49 +9,26 @@ pub const DEFAULT_INTERVAL_MS: u32 = 1500;
 /// Tuned down from 2000 (6s) to keep the beat without stalling.
 const PAUSE_STEP_MS: u32 = 700;
 
-const CHARACTERS: &[&str] = &["ali", "bader", "bevil", "hasan", "josh", "qassim", "smobb"];
-
-const CHARACTER_NAMES: &[&str] = &[
-    "ali", "bader", "bevil", "hasan", "josh", "qassim", "qasim", "smobb",
-];
-const STRUCTURAL: &[&str] = &["guide", "extra", "story", "stories", "names", "settings"];
-
 fn display_name(id: &str) -> String {
-    match id {
-        "hub" => "Hub",
-        "ali" => "Ali",
-        "bader" => "Bader",
-        "bevil" => "Bevil",
-        "hasan" => "Hasan",
-        "josh" => "Josh",
-        "qassim" | "qasim" => "Qassim",
-        "smobb" => "S.M.O.B.B.",
-        "mavis" => "M.A.V.I.S.",
-        "guide" => "Guide",
-        "guide_names" => "Names",
-        "extra" => "Stories",
-        other => {
-            return {
-                let mut c = other.chars();
-                match c.next() {
-                    Some(f) => f.to_uppercase().chain(c).collect(),
-                    None => String::new(),
-                }
-            }
-        }
+    // Accept either a canonical id or any of its aliases.
+    let canon = crate::vocab::canonical(id).unwrap_or(id);
+    if let Some(l) = crate::vocab::label(canon) {
+        return l.to_string();
     }
-    .to_string()
+    // Not a registry id (e.g. a one-off location like "guide" sub-pages):
+    // capitalize the first letter of the original id.
+    let mut c = id.chars();
+    match c.next() {
+        Some(f) => f.to_uppercase().chain(c).collect(),
+        None => String::new(),
+    }
 }
 
 fn structural_label(key: &str) -> String {
-    match key {
-        "guide" => "Guide",
-        "extra" | "story" | "stories" => "Stories",
-        "names" => "Names",
-        "settings" => "Settings",
-        _ => key,
-    }
-    .to_string()
+    let canon = crate::vocab::canonical(key).unwrap_or(key);
+    crate::vocab::label(canon)
+        .map(|l| l.to_string())
+        .unwrap_or_else(|| key.to_string())
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -107,6 +84,7 @@ pub struct Engine {
     interval_ms: u32,
     skip: bool,
     pending_prompt: Option<Vec<crate::scene::Branch>>,
+    pending_gate: Option<crate::scene::GateSpec>,
     recap: crate::recap::Recap,
     decoded: Vec<(String, String)>,
     discovered: std::collections::BTreeSet<String>,
@@ -126,6 +104,7 @@ impl Engine {
             interval_ms: DEFAULT_INTERVAL_MS,
             skip: false,
             pending_prompt: None,
+            pending_gate: None,
             recap: crate::recap::Recap::default(),
             decoded: Vec::new(),
             discovered: std::collections::BTreeSet::new(),
@@ -257,9 +236,13 @@ impl Engine {
         // Universal escape: works the same from anywhere. Inside a dialogue/scene
         // it aborts back to the current location's menu; at a menu it leaves the
         // location (the hub quits the game).
-        if matches!(input.as_str(), "leave" | "exit" | "back" | "end") {
-            if self.pending_prompt.is_some() || !self.frames.is_empty() {
+        if matches!(input.as_str(), "leave" | "exit" | "back" | "end" | "quit") {
+            if self.pending_prompt.is_some()
+                || self.pending_gate.is_some()
+                || !self.frames.is_empty()
+            {
                 self.pending_prompt = None;
+                self.pending_gate = None;
                 self.frames.clear();
                 return self.menu_prompt();
             }
@@ -270,10 +253,51 @@ impl Engine {
             }
             return vec![Output::End];
         }
+        if let Some(gate) = self.pending_gate.take() {
+            let aff = crate::vocab::canonical(&input) == Some("yes");
+            let neg = crate::vocab::canonical(&input) == Some("no");
+            let typed_code = crate::vocab::key_matches(&gate.code, &input);
+            let knows = self.eval_condition(&crate::scene::Condition::Knows(gate.code.clone()));
+            let steps = if typed_code || (aff && knows) {
+                Some(gate.on_deploy.clone())
+            } else if aff {
+                Some(gate.on_missing.clone())
+            } else if neg {
+                Some(gate.on_decline.clone())
+            } else {
+                None
+            };
+            match steps {
+                Some(s) => {
+                    self.frames.push(Frame { steps: s, idx: 0 });
+                    let mut out = self.run();
+                    if self.frames.is_empty()
+                        && !out.contains(&Output::End)
+                        && !matches!(out.last(), Some(Output::AwaitInput))
+                    {
+                        out.extend(self.menu_prompt());
+                    }
+                    return out;
+                }
+                None => {
+                    // unrecognized: re-emit the signpost and keep waiting.
+                    let signpost = gate.signpost.clone();
+                    self.pending_gate = Some(gate);
+                    return vec![
+                        Output::Line {
+                            text: signpost,
+                            color: crate::speaker::Speaker::System.color(),
+                            speaker: Some(crate::speaker::Speaker::System),
+                        },
+                        Output::AwaitInput,
+                    ];
+                }
+            }
+        }
         if let Some(branches) = self.pending_prompt.take() {
             let chosen = branches
                 .iter()
-                .find(|b| b.keys.iter().any(|k| k.to_lowercase() == input))
+                .find(|b| b.keys.iter().any(|k| crate::vocab::key_matches(k, &input)))
                 .or_else(|| branches.iter().find(|b| b.keys.is_empty()));
             match chosen {
                 Some(b) => {
@@ -318,13 +342,17 @@ impl Engine {
             });
         }
         for k in &b.keys {
-            if CHARACTER_NAMES.contains(&k.as_str()) {
-                return Some(format!("Ask about {}", display_name(k)));
+            if let Some(c) = crate::vocab::canonical(k) {
+                if crate::vocab::is_character(c) {
+                    return Some(format!("Ask about {}", display_name(c)));
+                }
             }
         }
         for k in &b.keys {
-            if STRUCTURAL.contains(&k.as_str()) {
-                return Some(structural_label(k));
+            if let Some(c) = crate::vocab::canonical(k) {
+                if matches!(c, "guide" | "extra" | "guide_names" | "settings") {
+                    return Some(structural_label(k));
+                }
             }
         }
         None
@@ -396,32 +424,32 @@ impl Engine {
             "sm",
             "interval",
             "in",
-            "options",
-            "journal",
-            "j",
             "guide",
             "help",
             "play",
             "pl",
             "shortcut",
             "shortcuts",
-            "look",
-            "?",
             "info",
             "information",
+            "options",
+            "choices",
+            "choice",
         ];
         for b in &loc.commands {
-            if b.keys.iter().any(|k| k.to_lowercase() == input) {
-                if self.branch_label(&loc_id, b).is_none() {
-                    self.discovered.insert(input.to_string());
+            if b.keys.iter().any(|k| crate::vocab::key_matches(k, input)) {
+                let recorded = crate::vocab::canonical(input).unwrap_or(input).to_string();
+                let is_meta = NONRECORD.contains(&input);
+                if !is_meta && self.branch_label(&loc_id, b).is_none() {
+                    self.discovered.insert(recorded.clone());
                 }
                 let is_nav = matches!(&b.target, crate::scene::Target::Steps(steps)
                     if steps.iter().any(|s| matches!(s, crate::scene::Step::Enter(_))));
-                if !is_nav && !NONRECORD.contains(&input) {
+                if !is_nav && !is_meta {
                     self.asked
                         .entry(loc_id.clone())
                         .or_default()
-                        .insert(input.to_string());
+                        .insert(recorded.clone());
                 }
                 self.push_target(&b.target);
                 let mut out = self.run();
@@ -434,8 +462,17 @@ impl Engine {
                 return out;
             }
         }
-        // unknown command: just re-prompt
-        self.menu_prompt()
+        // unknown command: tell the player it wasn't understood, then re-prompt.
+        let mut out = vec![Output::Line {
+            text: format!(
+                "I don't understand '{}'. Type 'options' to see what you can do.",
+                input
+            ),
+            color: crate::speaker::Color::White,
+            speaker: None,
+        }];
+        out.extend(self.menu_prompt());
+        out
     }
 
     fn push_target(&mut self, target: &Target) {
@@ -531,7 +568,7 @@ impl Engine {
                 Step::Enter(id) => {
                     self.frames.clear();
                     self.loc_stack.push(id.clone());
-                    if CHARACTERS.contains(&id.as_str()) {
+                    if crate::vocab::is_character(&id) {
                         self.visited.insert(id.clone());
                     }
                     let loc = self
@@ -554,9 +591,58 @@ impl Engine {
                 Step::Effect(k) => {
                     out.push(Output::Effect(k));
                 }
+                Step::If(cond, then_steps, else_steps) => {
+                    let chosen = if self.eval_condition(&cond) {
+                        then_steps
+                    } else {
+                        else_steps
+                    };
+                    self.frames.push(Frame {
+                        steps: chosen,
+                        idx: 0,
+                    });
+                }
+                Step::Gate(spec) => {
+                    out.push(Output::Line {
+                        text: spec.signpost.clone(),
+                        color: crate::speaker::Speaker::System.color(),
+                        speaker: Some(crate::speaker::Speaker::System),
+                    });
+                    self.pending_gate = Some(spec);
+                    out.push(Output::AwaitInput);
+                    return out;
+                }
             }
         }
         out
+    }
+
+    fn eval_condition(&self, c: &crate::scene::Condition) -> bool {
+        use crate::scene::Condition;
+        match c {
+            Condition::Knows(t) => {
+                let key = crate::vocab::canonical(t)
+                    .map(|c| c.to_string())
+                    .unwrap_or_else(|| t.to_lowercase());
+                self.discovered.contains(&key)
+            }
+            Condition::Visited(id) => {
+                let id = crate::vocab::canonical(id)
+                    .map(|c| c.to_string())
+                    .unwrap_or_else(|| id.to_lowercase());
+                self.visited.contains(&id)
+            }
+            Condition::Asked(loc, topic) => {
+                let loc = crate::vocab::canonical(loc)
+                    .map(|c| c.to_string())
+                    .unwrap_or_else(|| loc.to_lowercase());
+                let topic = crate::vocab::canonical(topic)
+                    .map(|c| c.to_string())
+                    .unwrap_or_else(|| topic.to_lowercase());
+                self.asked.get(&loc).is_some_and(|s| s.contains(&topic))
+            }
+            Condition::DecodeUnlocked => self.decoding_unlocked,
+        }
     }
 
     fn emit_pause(&self, out: &mut Vec<Output>) {
@@ -808,6 +894,21 @@ mod tests {
     }
 
     #[test]
+    fn unknown_command_gives_feedback_then_reprompts() {
+        use crate::content;
+        let c = content::from_str(&[r#"ContentPart(
+            locations: { "hub": ( prompt:[Line(Smobb,"MENU")], commands: [] ) },
+            scenes: {},
+        )"#]);
+        let mut e = Engine::new(c);
+        let _ = e.start();
+        let out = e.advance("zzzz");
+        assert!(out.iter().any(|o| matches!(o, Output::Line{text,..}
+            if text.contains("zzzz") && text.to_lowercase().contains("options"))));
+        assert!(matches!(out.last().unwrap(), Output::AwaitInput));
+    }
+
+    #[test]
     fn pause_emits_three_dotted_sleeps() {
         use crate::content;
         let c = content::from_str(&[r#"ContentPart(
@@ -882,6 +983,28 @@ mod tests {
         assert!(out
             .iter()
             .any(|o| matches!(o, Output::Line{text,..} if text=="DEFAULT")));
+    }
+
+    #[test]
+    fn prompt_matches_affirmative_aliases() {
+        use crate::content;
+        let c = content::from_str(&[r#"ContentPart(
+            locations: { "hub": ( commands: [ Branch(keys:["go"], target: Steps([
+                Prompt([
+                    Branch(keys:["yes"], target: Steps([ Line(Smobb,"YESPATH"), Return ])),
+                    Branch(keys:[], target: Steps([ Line(Smobb,"DEFAULT"), Return ])),
+                ]),
+            ])) ] ) },
+            scenes: {},
+        )"#]);
+        let mut e = Engine::new(c);
+        e.set_skip(true);
+        let _ = e.start();
+        let _ = e.advance("go");
+        let out = e.advance("yeah"); // alias of "yes" — must take YESPATH, not DEFAULT
+        assert!(out
+            .iter()
+            .any(|o| matches!(o, Output::Line{text,..} if text == "YESPATH")));
     }
 
     #[test]
@@ -1384,5 +1507,429 @@ mod tests {
         ]));
         e2.restore(snap2);
         assert!(e2.reduced_effects());
+    }
+
+    #[test]
+    fn label_word_enters_branch_keyed_by_sibling_alias() {
+        use crate::content;
+        // Branch is keyed only "extra"; typing the displayed label "stories" must enter it.
+        let c = content::from_str(&[r#"ContentPart(
+            locations: {
+                "hub": ( prompt:[Line(Smobb,"HUB")], commands: [ Branch(keys:["extra"], target: Steps([ Enter("extra") ])) ] ),
+                "extra": ( prompt:[Line(Smobb,"STORIES")], commands: [] ),
+            },
+            scenes: {},
+        )"#]);
+        let mut e = Engine::new(c);
+        e.set_skip(true);
+        let _ = e.start();
+        let out = e.advance("stories");
+        assert!(out
+            .iter()
+            .any(|o| matches!(o, Output::Line{text,..} if text == "STORIES")));
+    }
+
+    #[test]
+    fn password_branch_still_requires_exact_match() {
+        use crate::content;
+        let c = content::from_str(&[r#"ContentPart(
+            locations: { "hub": ( commands: [ Branch(keys:["7549009"], target: Steps([ Line(System,"ok") ])) ] ) },
+            scenes: {},
+        )"#]);
+        let mut e = Engine::new(c);
+        e.set_skip(true);
+        let _ = e.start();
+        let out = e.advance("754");
+        assert!(!out
+            .iter()
+            .any(|o| matches!(o, Output::Line{text,..} if text == "ok")));
+        let out = e.advance("7549009");
+        assert!(out
+            .iter()
+            .any(|o| matches!(o, Output::Line{text,..} if text == "ok")));
+    }
+
+    #[test]
+    fn display_name_comes_from_registry_with_capitalize_fallback() {
+        assert_eq!(display_name("extra"), "Stories");
+        assert_eq!(display_name("qassim"), "Qassim");
+        assert_eq!(display_name("smobb"), "S.M.O.B.B.");
+        assert_eq!(display_name("guide_names"), "Names");
+        assert_eq!(display_name("qasim"), "Qassim"); // alias resolves to canonical label
+                                                     // unknown id still capitalizes
+        assert_eq!(display_name("tranava"), "Tranava");
+    }
+
+    #[test]
+    fn entering_via_alias_records_canonical_visit() {
+        use crate::content;
+        // Branch keyed "qasim" enters location "qassim"; visited must store canonical "qassim".
+        let c = content::from_str(&[r#"ContentPart(
+            locations: {
+                "hub": ( commands: [ Branch(keys:["qasim"], target: Steps([ Enter("qassim") ])) ] ),
+                "qassim": ( commands: [ Branch(keys:["end"], target: Steps([ Return ])) ] ),
+            },
+            scenes: {},
+        )"#]);
+        let mut e = Engine::new(c);
+        e.set_skip(true);
+        let _ = e.start();
+        let _ = e.advance("qasim");
+        assert!(e.visited().contains("qassim"));
+    }
+
+    #[test]
+    fn if_step_branches_on_knows() {
+        use crate::content;
+        // Branch "withpw" learns the password (Recap) then If(Knows) -> KNOWN.
+        // Branch "nopw" has not learned it -> UNKNOWN.
+        let c = content::from_str(&[r#"ContentPart(
+            locations: { "hub": ( commands: [
+                Branch(keys:["withpw"], target: Steps([
+                    Recap("The password for the Tranava files is '7549009'."),
+                    If(Knows("7549009"), [ Line(System,"KNOWN") ], [ Line(System,"UNKNOWN") ]),
+                    Return,
+                ])),
+                Branch(keys:["nopw"], target: Steps([
+                    If(Knows("7549009"), [ Line(System,"KNOWN") ], [ Line(System,"UNKNOWN") ]),
+                    Return,
+                ])),
+            ] ) },
+            scenes: {},
+        )"#]);
+        let mut e = Engine::new(c);
+        e.set_skip(true);
+        let _ = e.start();
+        let out = e.advance("nopw");
+        assert!(out
+            .iter()
+            .any(|o| matches!(o, Output::Line{text,..} if text == "UNKNOWN")));
+        let out = e.advance("withpw");
+        assert!(out
+            .iter()
+            .any(|o| matches!(o, Output::Line{text,..} if text == "KNOWN")));
+    }
+
+    #[test]
+    fn gate_emits_signpost_then_awaits() {
+        use crate::content;
+        let c = content::from_str(&[r#"ContentPart(
+        locations: { "hub": ( commands: [ Branch(keys:["go"], target: Steps([
+            Gate(GateSpec(
+                code: "<---------->",
+                signpost: "BREACH DETECTED — deploy prevention? (yes)",
+                on_deploy: [ Line(System, "STOPPED"), Return ],
+                on_missing: [ Line(System, "NO CODE"), Return ],
+                on_decline: [ Line(System, "IGNORED"), Return ],
+            )),
+        ])) ] ) },
+        scenes: {},
+    )"#]);
+        let mut e = Engine::new(c);
+        e.set_skip(true);
+        let _ = e.start();
+        let out = e.advance("go");
+        assert!(out
+            .iter()
+            .any(|o| matches!(o, Output::Line{text,..} if text.contains("BREACH DETECTED"))));
+        assert!(matches!(out.last().unwrap(), Output::AwaitInput));
+        // not yet resolved: none of the outcome lines emitted
+        assert!(!out.iter().any(|o| matches!(o, Output::Line{text,..}
+            if text == "STOPPED" || text == "NO CODE" || text == "IGNORED")));
+    }
+
+    #[test]
+    fn branch_label_identifies_character_and_structural_via_registry() {
+        use crate::content;
+        let c = content::from_str(&[r#"ContentPart(
+            locations: { "hub": ( commands: [
+                Branch(keys:["bader"], target: Steps([ Line(Ali,"about bader") ])),
+                Branch(keys:["stories"], target: Steps([ Enter("extra") ])),
+            ] ) },
+            scenes: {},
+        )"#]);
+        let mut e = Engine::new(c);
+        let _ = e.start();
+        let joined: String = e
+            .options_view()
+            .iter()
+            .filter_map(|o| match o {
+                Output::Line { text, .. } => Some(text.clone()),
+                _ => None,
+            })
+            .collect::<Vec<_>>()
+            .join("\n");
+        assert!(joined.contains("Ask about Bader"));
+        assert!(joined.contains("Stories"));
+    }
+
+    fn gate_fixture() -> crate::scene::Content {
+        crate::content::from_str(&[r#"ContentPart(
+            locations: { "hub": ( prompt:[Line(Smobb,"MENU")], commands: [
+                Branch(keys:["learn"], target: Steps([
+                    Recap("The breach prevention code is '<---------->'."),
+                ])),
+                Branch(keys:["breach"], target: Steps([
+                    Gate(GateSpec(
+                        code: "<---------->",
+                        signpost: "BREACH — deploy prevention? (yes)",
+                        on_deploy: [ Line(System, "STOPPED"), Return ],
+                        on_missing: [ Line(System, "NO CODE"), Return ],
+                        on_decline: [ Line(System, "IGNORED"), Return ],
+                    )),
+                ])),
+            ] ) },
+            scenes: {},
+        )"#])
+    }
+
+    #[test]
+    fn gate_deploys_when_known_and_affirmative() {
+        let mut e = Engine::new(gate_fixture());
+        e.set_skip(true);
+        let _ = e.start();
+        let _ = e.advance("learn"); // discover the code
+        let _ = e.advance("breach"); // signpost + await
+        let out = e.advance("yes");
+        assert!(out
+            .iter()
+            .any(|o| matches!(o, Output::Line{text,..} if text == "STOPPED")));
+    }
+
+    #[test]
+    fn gate_missing_when_affirmative_without_code() {
+        let mut e = Engine::new(gate_fixture());
+        e.set_skip(true);
+        let _ = e.start();
+        let _ = e.advance("breach"); // never learned the code
+        let out = e.advance("yes");
+        assert!(out
+            .iter()
+            .any(|o| matches!(o, Output::Line{text,..} if text == "NO CODE")));
+    }
+
+    #[test]
+    fn gate_declines_on_negative() {
+        let mut e = Engine::new(gate_fixture());
+        e.set_skip(true);
+        let _ = e.start();
+        let _ = e.advance("learn");
+        let _ = e.advance("breach");
+        let out = e.advance("no");
+        assert!(out
+            .iter()
+            .any(|o| matches!(o, Output::Line{text,..} if text == "IGNORED")));
+    }
+
+    #[test]
+    fn gate_literal_code_deploys() {
+        let mut e = Engine::new(gate_fixture());
+        e.set_skip(true);
+        let _ = e.start();
+        let _ = e.advance("breach"); // even without "learn", typing the code proves knowledge
+        let out = e.advance("<---------->");
+        assert!(out
+            .iter()
+            .any(|o| matches!(o, Output::Line{text,..} if text == "STOPPED")));
+    }
+
+    #[test]
+    fn gate_reawaits_on_unrecognized_input() {
+        let mut e = Engine::new(gate_fixture());
+        e.set_skip(true);
+        let _ = e.start();
+        let _ = e.advance("breach");
+        let out = e.advance("banana");
+        // re-emits signpost, still awaiting, no outcome line
+        assert!(out
+            .iter()
+            .any(|o| matches!(o, Output::Line{text,..} if text.contains("BREACH"))));
+        assert!(matches!(out.last().unwrap(), Output::AwaitInput));
+        assert!(!out.iter().any(|o| matches!(o, Output::Line{text,..}
+            if text == "STOPPED" || text == "NO CODE" || text == "IGNORED")));
+    }
+
+    #[test]
+    fn gate_universal_escape_aborts_to_menu() {
+        let mut e = Engine::new(gate_fixture());
+        e.set_skip(true);
+        let _ = e.start();
+        let _ = e.advance("breach");
+        let out = e.advance("leave");
+        assert!(out
+            .iter()
+            .any(|o| matches!(o, Output::Line{text,..} if text == "MENU")));
+        assert!(matches!(out.last().unwrap(), Output::AwaitInput));
+    }
+
+    #[test]
+    fn snapshot_works_with_open_gate() {
+        let mut e = Engine::new(gate_fixture());
+        e.set_skip(true);
+        let _ = e.start();
+        let _ = e.advance("learn");
+        let _ = e.advance("breach"); // gate now open
+        let snap = e.snapshot();
+        assert!(snap.discovered.contains(&"<---------->".to_string()));
+        let snap2 = crate::save::SaveState::from_json(&snap.to_json()).unwrap();
+        assert_eq!(snap, snap2);
+    }
+
+    #[test]
+    fn if_step_visited_matches_via_alias() {
+        use crate::content;
+        let c = content::from_str(&[r#"ContentPart(
+            locations: {
+                "hub": ( commands: [
+                    Branch(keys:["go"], target: Steps([ Enter("qassim") ])),
+                    Branch(keys:["check"], target: Steps([
+                        If(Visited("qasim"), [ Line(System,"SEEN") ], [ Line(System,"UNSEEN") ]),
+                        Return,
+                    ])),
+                ] ),
+                "qassim": ( commands: [ Branch(keys:["end"], target: Steps([ Return ])) ] ),
+            },
+            scenes: {},
+        )"#]);
+        let mut e = Engine::new(c);
+        e.set_skip(true);
+        let _ = e.start();
+        let out = e.advance("check"); // not visited yet
+        assert!(out
+            .iter()
+            .any(|o| matches!(o, Output::Line{text,..} if text == "UNSEEN")));
+        let _ = e.advance("go"); // enter qassim (canonical recorded in visited)
+        let _ = e.advance("end"); // back to hub
+        let out = e.advance("check"); // alias "qasim" must canonicalize to "qassim"
+        assert!(out
+            .iter()
+            .any(|o| matches!(o, Output::Line{text,..} if text == "SEEN")));
+    }
+
+    #[test]
+    fn if_decode_unlocked_branches_correctly() {
+        use crate::content;
+        let c = content::from_str(&[r#"ContentPart(
+            locations: { "hub": ( commands: [
+                Branch(keys:["unlock"], target: Steps([
+                    UnlockDecode,
+                    If(DecodeUnlocked, [ Line(System,"DEC") ], [ Line(System,"RAW") ]),
+                    Return,
+                ])),
+                Branch(keys:["check"], target: Steps([
+                    If(DecodeUnlocked, [ Line(System,"DEC") ], [ Line(System,"RAW") ]),
+                    Return,
+                ])),
+            ] ) },
+            scenes: {},
+        )"#]);
+        let mut e = Engine::new(c);
+        e.set_skip(true);
+        let _ = e.start();
+        let out = e.advance("check"); // not yet unlocked
+        assert!(out
+            .iter()
+            .any(|o| matches!(o, Output::Line{text,..} if text == "RAW")));
+        let out = e.advance("unlock"); // unlock then check
+        assert!(out
+            .iter()
+            .any(|o| matches!(o, Output::Line{text,..} if text == "DEC")));
+    }
+
+    #[test]
+    fn if_step_asked_matches_via_alias() {
+        use crate::content;
+        // Ask about "qasim" (alias) at "ali" — the engine stores canonical "qassim".
+        // Then If(Asked("ali","qasim"), ...) must canonicalize to "qassim" and be true.
+        // Note: "check" has no Return so we stay in "ali" between calls.
+        let c = content::from_str(&[r#"ContentPart(
+            locations: {
+                "hub": ( commands: [
+                    Branch(keys:["go"], target: Steps([ Enter("ali") ])),
+                ] ),
+                "ali": ( commands: [
+                    Branch(keys:["qasim"], target: Steps([ Line(Ali,"about qassim") ])),
+                    Branch(keys:["check"], target: Steps([
+                        If(Asked("ali","qasim"), [ Line(System,"WAS ASKED") ], [ Line(System,"NOT ASKED") ]),
+                    ])),
+                ] ),
+            },
+            scenes: {},
+        )"#]);
+        let mut e = Engine::new(c);
+        e.set_skip(true);
+        let _ = e.start();
+        let _ = e.advance("go"); // enter ali
+        let out = e.advance("check"); // not yet asked
+        assert!(out
+            .iter()
+            .any(|o| matches!(o, Output::Line{text,..} if text == "NOT ASKED")));
+        let _ = e.advance("qasim"); // ask about qasim (alias -> canonical "qassim" stored)
+        let out = e.advance("check"); // alias in condition must match
+        assert!(out
+            .iter()
+            .any(|o| matches!(o, Output::Line{text,..} if text == "WAS ASKED")));
+    }
+
+    #[test]
+    fn gate_deploys_when_known_and_affirmative_alias() {
+        // "yeah" is an alias of "yes"; after learning the code, saying "yeah" must deploy.
+        let mut e = Engine::new(gate_fixture());
+        e.set_skip(true);
+        let _ = e.start();
+        let _ = e.advance("learn"); // discover the code
+        let _ = e.advance("breach"); // signpost + await
+        let out = e.advance("yeah"); // affirmative alias -> STOPPED
+        assert!(out
+            .iter()
+            .any(|o| matches!(o, Output::Line{text,..} if text == "STOPPED")));
+    }
+
+    #[test]
+    fn options_command_not_recorded_in_asked() {
+        use crate::content;
+        let c = content::from_str(&[r#"ContentPart(
+            locations: {
+                "hub": ( commands: [ Branch(keys:["go"], target: Steps([ Enter("g") ])) ] ),
+                "g": ( prompt:[Line(System,"?")], commands: [
+                    Branch(keys:["options","choices","choice"], target: Steps([ Line(System,"OPTS") ])),
+                ] ),
+            },
+            scenes: {},
+        )"#]);
+        let mut e = Engine::new(c);
+        e.set_skip(true);
+        let _ = e.start();
+        let _ = e.advance("go");
+        let _ = e.advance("options");
+        let jrnl: String = e
+            .journal_view()
+            .iter()
+            .filter_map(|o| match o {
+                Output::Line { text, .. } => Some(text.clone()),
+                _ => None,
+            })
+            .collect::<Vec<_>>()
+            .join("\n");
+        assert!(
+            !jrnl.contains("options"),
+            "meta-command 'options' must not appear in [Asked]"
+        );
+    }
+
+    #[test]
+    fn quit_label_is_typeable_at_hub() {
+        use crate::content;
+        let c = content::from_str(&[r#"ContentPart(
+            locations: { "hub": ( prompt:[Line(Smobb,"HUB")], commands: [
+                Branch(keys:["end"], target: Steps([ Quit ])),
+            ] ) },
+            scenes: {},
+        )"#]);
+        let mut e = Engine::new(c);
+        e.set_skip(true);
+        let _ = e.start();
+        let out = e.advance("quit"); // the displayed "Quit" label must end the game at the hub
+        assert!(out.contains(&Output::End));
     }
 }

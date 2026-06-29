@@ -7,6 +7,7 @@ pub mod recap;
 pub mod save;
 pub mod scene;
 pub mod speaker;
+pub mod vocab;
 
 #[cfg(test)]
 mod smoke {

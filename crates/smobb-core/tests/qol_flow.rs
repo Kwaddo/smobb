@@ -42,10 +42,10 @@ fn jaffar_line_decodes_into_journal() {
     e.set_skip(true);
     let _ = e.start();
     // Jaffar's hex stays gibberish until the player learns it's hex at Bevil.
-    // Before that reveal, the wrong-breach path must NOT translate.
+    // Before that reveal, the declined-breach path must NOT translate.
     let _ = e.advance("ali");
     let _ = e.advance("!save");
-    let pre = e.advance("wrong");
+    let pre = e.advance("no");
     assert!(
         !pre.iter().any(|o| matches!(o, Output::Translation(_))),
         "Jaffar should read as raw hex before the decode is unlocked"
@@ -55,14 +55,14 @@ fn jaffar_line_decodes_into_journal() {
     let _ = e.advance("bevil");
     let _ = e.advance("jaffar");
     let _ = e.advance("end"); // back to hub
-                              // now the same wrong-breach path auto-translates
+                              // now the decline-breach path auto-translates
     let _ = e.advance("ali");
     let _ = e.advance("!save");
-    let out = e.advance("wrong");
+    let out = e.advance("no");
     let has_translation = out.iter().any(|o| matches!(o, Output::Translation(_)));
     assert!(
         has_translation,
-        "after the Bevil hex reveal, a wrong breach answer should emit Jaffar translations"
+        "after the Bevil hex reveal, a declined breach answer should emit Jaffar translations"
     );
     let jrnl = lines(&e.journal_view());
     assert!(jrnl.contains("[Decoded]"));
