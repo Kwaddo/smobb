@@ -61,9 +61,15 @@ impl ApplicationHandler for AppHandler {
 
         let backend = pollster::block_on(
             Builder::from_font(Font::new(dejavu::sans_mono::regular()).expect("mono font"))
-                // proportional DejaVu Sans as fallback for symbol glyphs the
-                // mono face may lack (e.g. the pencil/gear dingbats).
-                .with_fonts([Font::new(dejavu::sans::regular()).expect("fallback font")])
+                // All faces MUST be monospace with the same aspect ratio: the
+                // backend sets the grid cell width to the *minimum* char width
+                // across every font, so a proportional fallback would shrink the
+                // cell and make glyphs overlap. Use the mono bold/italic faces.
+                .with_bold_fonts([Font::new(dejavu::sans_mono::bold()).expect("mono bold")])
+                .with_italic_fonts([Font::new(dejavu::sans_mono::oblique()).expect("mono italic")])
+                .with_bold_italic_fonts([
+                    Font::new(dejavu::sans_mono::bold_oblique()).expect("mono bold-italic"),
+                ])
                 // ratatui-wgpu defaults to a WHITE background; a terminal's
                 // `Reset` is dark, so recolor the default cell to match.
                 .with_bg_color(WgpuColor::Rgb(8, 8, 8))
