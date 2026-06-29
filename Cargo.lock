@@ -652,7 +652,7 @@ checksum = "8ed6a63f02c8539c91a8685a86f4099661ba3da017932f6ebbea6de3f0fa7c90"
 
 [[package]]
 name = "smobb-core"
-version = "0.1.0"
+version = "2.0.1"
 dependencies = [
  "ron",
  "serde",
@@ -661,7 +661,7 @@ dependencies = [
 
 [[package]]
 name = "smobb-tui"
-version = "0.1.0"
+version = "2.0.1"
 dependencies = [
  "ratatui",
  "smobb-core",
@@ -671,7 +671,7 @@ dependencies = [
 
 [[package]]
 name = "smobb-tui-core"
-version = "0.1.0"
+version = "2.0.1"
 dependencies = [
  "ratatui",
  "smobb-core",
@@ -680,7 +680,7 @@ dependencies = [
 
 [[package]]
 name = "smobb-web"
-version = "0.1.0"
+version = "2.0.1"
 dependencies = [
  "ratzilla",
  "smobb-core",
