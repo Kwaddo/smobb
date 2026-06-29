@@ -43,6 +43,10 @@ fn build_terminal(window: Arc<Window>, px: u32) -> DesktopTerminal {
     let size = window.inner_size();
     let width = NonZeroU32::new(size.width.max(1)).unwrap();
     let height = NonZeroU32::new(size.height.max(1)).unwrap();
+    // `px` is a logical point size; the backend works in physical pixels, so
+    // scale by the display's factor. Otherwise on a HiDPI (Retina) screen a
+    // 16pt font renders at 16 physical px — half the expected size.
+    let physical_px = ((px as f64) * window.scale_factor()).round().max(1.0) as u32;
 
     let backend = pollster::block_on(
         Builder::from_font(Font::new(dejavu::sans_mono::regular()).expect("mono font"))
@@ -55,7 +59,7 @@ fn build_terminal(window: Arc<Window>, px: u32) -> DesktopTerminal {
             // is dark, so recolor the default cell to match.
             .with_bg_color(WgpuColor::Rgb(8, 8, 8))
             .with_fg_color(WgpuColor::Rgb(220, 220, 220))
-            .with_font_size_px(px)
+            .with_font_size_px(physical_px)
             .with_width_and_height(Dimensions { width, height })
             .build_with_target(window),
     )
@@ -101,6 +105,17 @@ impl AppHandler {
     /// after a state change that must be reflected immediately instead of
     /// waiting for the next queued redraw (avoids a stale/black frame).
     fn redraw_now(&mut self) {
+        // Re-fit the grid to the window's *current* size every frame. macOS
+        // fires a burst of bouncing Resized events during a fullscreen
+        // transition; if the last one the backend saw was the smaller windowed
+        // size while the real surface is larger, the grid stays small and the
+        // screen renders into the top-left with black around it. Syncing here
+        // means the steady state always self-corrects. resize() early-returns
+        // when the size is unchanged, so this is cheap.
+        if let (Some(t), Some(w)) = (self.terminal.as_mut(), self.window.as_ref()) {
+            let s = w.inner_size();
+            t.backend_mut().resize(s.width.max(1), s.height.max(1));
+        }
         let Self {
             terminal,
             app,
@@ -182,19 +197,21 @@ impl AppHandler {
     }
 
     fn scroll_by_wheel(&mut self, delta: MouseScrollDelta) {
-        let window_w = self
+        let (window_w, scale) = self
             .window
             .as_ref()
-            .map(|w| w.inner_size().width as f64)
-            .unwrap_or(1.0);
+            .map(|w| (w.inner_size().width as f64, w.scale_factor()))
+            .unwrap_or((1.0, 1.0));
         let pane = input::pane_at(window_w, self.cursor_x, self.app.sidebar_visible());
         // Positive wheel/trackpad delta = scroll up (toward earlier text), so a
         // positive physical delta maps to a negative line offset.
         let lines = match delta {
             MouseScrollDelta::LineDelta(_, y) => -(y.round() as i32) * WHEEL_LINES,
             MouseScrollDelta::PixelDelta(p) => {
+                // PixelDelta is physical px; one text row is `font_px` logical
+                // points = `font_px * scale` physical px.
                 self.wheel_accum += p.y as f32;
-                let cell = self.font_px.max(1) as f32;
+                let cell = (self.font_px as f64 * scale).max(1.0) as f32;
                 let whole = (self.wheel_accum / cell).trunc();
                 self.wheel_accum -= whole * cell;
                 -(whole as i32)
@@ -240,12 +257,9 @@ impl ApplicationHandler for AppHandler {
             WindowEvent::ModifiersChanged(m) => self.mods = m.state(),
             WindowEvent::CursorMoved { position, .. } => self.cursor_x = position.x,
             WindowEvent::MouseWheel { delta, .. } => self.scroll_by_wheel(delta),
-            WindowEvent::Resized(size) => {
-                if let Some(t) = self.terminal.as_mut() {
-                    t.backend_mut().resize(size.width, size.height);
-                }
-                self.request_redraw();
-            }
+            // The backend is re-fit to the window's current size inside
+            // `redraw_now`, so a resize just needs to schedule a draw.
+            WindowEvent::Resized(_) => self.request_redraw(),
             WindowEvent::KeyboardInput { event, .. } => {
                 if event.state != ElementState::Pressed {
                     return;
