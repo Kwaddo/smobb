@@ -10,6 +10,13 @@ pub enum Tab {
     Journal,
 }
 
+/// Which pane the scroll keys (Up/Down/PageUp/PageDown) currently drive.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Focus {
+    Story,
+    Sidebar,
+}
+
 #[derive(Debug, Clone)]
 pub struct Span {
     pub text: String,
@@ -29,6 +36,8 @@ pub enum Key {
     F3,
     Up,
     Down,
+    Left,
+    Right,
     PageUp,
     PageDown,
     Esc,
@@ -57,6 +66,9 @@ pub struct App {
     sidebar_visible: bool,
     scroll: u16,
     user_scrolled: bool,
+    scroll_focus: Focus,
+    sidebar_scroll: u16,
+    sidebar_user_scrolled: bool,
     input: String,
     awaiting: bool,
     quit: bool,
@@ -84,6 +96,9 @@ impl App {
             sidebar_visible: true,
             scroll: 0,
             user_scrolled: false,
+            scroll_focus: Focus::Story,
+            sidebar_scroll: 0,
+            sidebar_user_scrolled: false,
             input: String::new(),
             awaiting: false,
             quit: false,
@@ -363,9 +378,18 @@ impl App {
                 self.tab = match self.tab {
                     Tab::Options => Tab::Journal,
                     Tab::Journal => Tab::Options,
+                };
+                // tabbing to a pane focuses it and starts at the top
+                self.scroll_focus = Focus::Sidebar;
+                self.sidebar_scroll = 0;
+                self.sidebar_user_scrolled = false;
+            }
+            Key::F1 => {
+                self.sidebar_visible = !self.sidebar_visible;
+                if !self.sidebar_visible {
+                    self.scroll_focus = Focus::Story;
                 }
             }
-            Key::F1 => self.sidebar_visible = !self.sidebar_visible,
             Key::F2 => {
                 let s = self.engine.skip();
                 self.engine.set_skip(!s);
@@ -376,16 +400,46 @@ impl App {
                 self.engine.set_reduced_effects(!r);
                 self.dirty = true; // persist the accessibility setting
             }
-            Key::Up => {
-                self.user_scrolled = true;
-                self.scroll = self.scroll.saturating_sub(1);
+            Key::Left => self.scroll_focus = Focus::Story,
+            Key::Right => {
+                if self.sidebar_visible {
+                    self.scroll_focus = Focus::Sidebar;
+                }
             }
-            Key::Down => self.scroll = self.scroll.saturating_add(1),
-            Key::PageUp => {
-                self.user_scrolled = true;
-                self.scroll = self.scroll.saturating_sub(5);
-            }
-            Key::PageDown => self.scroll = self.scroll.saturating_add(5),
+            Key::Up => match self.scroll_focus {
+                Focus::Story => {
+                    self.user_scrolled = true;
+                    self.scroll = self.scroll.saturating_sub(1);
+                }
+                Focus::Sidebar => {
+                    self.sidebar_user_scrolled = true;
+                    self.sidebar_scroll = self.sidebar_scroll.saturating_sub(1);
+                }
+            },
+            Key::Down => match self.scroll_focus {
+                Focus::Story => self.scroll = self.scroll.saturating_add(1),
+                Focus::Sidebar => {
+                    self.sidebar_user_scrolled = true;
+                    self.sidebar_scroll = self.sidebar_scroll.saturating_add(1);
+                }
+            },
+            Key::PageUp => match self.scroll_focus {
+                Focus::Story => {
+                    self.user_scrolled = true;
+                    self.scroll = self.scroll.saturating_sub(5);
+                }
+                Focus::Sidebar => {
+                    self.sidebar_user_scrolled = true;
+                    self.sidebar_scroll = self.sidebar_scroll.saturating_sub(5);
+                }
+            },
+            Key::PageDown => match self.scroll_focus {
+                Focus::Story => self.scroll = self.scroll.saturating_add(5),
+                Focus::Sidebar => {
+                    self.sidebar_user_scrolled = true;
+                    self.sidebar_scroll = self.sidebar_scroll.saturating_add(5);
+                }
+            },
             Key::Shift => self.fast_requested = true, // hold Shift = fast-forward (see tick)
             Key::Char(c) => {
                 if self.awaiting {
@@ -434,6 +488,15 @@ impl App {
     }
     pub fn user_scrolled(&self) -> bool {
         self.user_scrolled
+    }
+    pub fn scroll_focus(&self) -> Focus {
+        self.scroll_focus
+    }
+    pub fn sidebar_scroll(&self) -> u16 {
+        self.sidebar_scroll
+    }
+    pub fn sidebar_user_scrolled(&self) -> bool {
+        self.sidebar_user_scrolled
     }
     pub fn input(&self) -> &str {
         &self.input
@@ -665,6 +728,68 @@ mod tests {
         // another submit -> enqueue -> user_scrolled reset to false
         app.submit_for_test("go");
         assert!(!app.user_scrolled());
+    }
+
+    #[test]
+    fn right_focuses_sidebar_left_focuses_story() {
+        let mut app = app_fixture();
+        app.tick(web_time::Instant::now());
+        assert_eq!(app.scroll_focus(), Focus::Story); // default
+        app.key(Key::Right); // sidebar visible by default
+        assert_eq!(app.scroll_focus(), Focus::Sidebar);
+        app.key(Key::Left);
+        assert_eq!(app.scroll_focus(), Focus::Story);
+    }
+
+    #[test]
+    fn right_does_nothing_when_sidebar_hidden() {
+        let mut app = app_fixture();
+        app.tick(web_time::Instant::now());
+        app.key(Key::F1); // hide sidebar
+        assert!(!app.sidebar_visible());
+        app.key(Key::Right);
+        assert_eq!(app.scroll_focus(), Focus::Story);
+    }
+
+    #[test]
+    fn hiding_sidebar_returns_focus_to_story() {
+        let mut app = app_fixture();
+        app.tick(web_time::Instant::now());
+        app.key(Key::Right);
+        assert_eq!(app.scroll_focus(), Focus::Sidebar);
+        app.key(Key::F1); // hide
+        assert_eq!(app.scroll_focus(), Focus::Story);
+    }
+
+    #[test]
+    fn tab_focuses_sidebar_and_resets_its_scroll() {
+        let mut app = app_fixture();
+        app.tick(web_time::Instant::now());
+        app.key(Key::Right);
+        app.key(Key::Down); // scroll sidebar down
+        assert!(app.sidebar_scroll() > 0);
+        app.key(Key::Tab); // switch tab -> reset offset, keep sidebar focus
+        assert_eq!(app.sidebar_scroll(), 0);
+        assert!(!app.sidebar_user_scrolled());
+        assert_eq!(app.scroll_focus(), Focus::Sidebar);
+    }
+
+    #[test]
+    fn arrows_route_to_focused_pane() {
+        let mut app = app_fixture();
+        app.tick(web_time::Instant::now());
+        // story focus: Down moves story, not sidebar
+        let s0 = app.scroll();
+        app.key(Key::Down);
+        assert_eq!(app.scroll(), s0 + 1);
+        assert_eq!(app.sidebar_scroll(), 0);
+        // sidebar focus: Down moves sidebar, marks user_scrolled, leaves story
+        app.key(Key::Right);
+        let story_before = app.scroll();
+        app.key(Key::Down);
+        assert_eq!(app.sidebar_scroll(), 1);
+        assert!(app.sidebar_user_scrolled());
+        assert_eq!(app.scroll(), story_before);
     }
 
     #[test]
