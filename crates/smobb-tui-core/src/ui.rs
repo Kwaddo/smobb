@@ -11,6 +11,44 @@ use smobb_core::speaker::Color;
 
 const GLITCH_GLYPHS: &[char] = &['#', '%', '@', '&', '░', '▒', '▓', '*'];
 
+/// Border style for a pane, brightened when it currently has scroll focus.
+fn pane_border_style(focused: bool) -> Style {
+    if focused {
+        Style::default()
+            .fg(RColor::Rgb(180, 220, 255))
+            .add_modifier(Modifier::BOLD)
+    } else {
+        Style::default().fg(RColor::Rgb(90, 90, 90))
+    }
+}
+
+/// Render the Options/Journal sidebar into `area`, applying the same
+/// `line_count`-based scroll clamp the story uses. The sidebar defaults to the
+/// top (read top-down) unless the user has scrolled.
+fn render_sidebar(f: &mut Frame, app: &App, area: Rect) {
+    use crate::app::Focus;
+    let (title, outs) = match app.tab() {
+        crate::app::Tab::Options => (" OPTIONS ", app.options_lines()),
+        crate::app::Tab::Journal => (" JOURNAL ", app.journal_lines()),
+    };
+    let lines: Vec<Line> = outs.iter().map(sidebar_line).collect();
+    let inner_w = area.width.saturating_sub(2);
+    let inner_h = area.height.saturating_sub(2);
+    let base = Paragraph::new(lines).wrap(Wrap { trim: false });
+    let total = base.line_count(inner_w) as u16;
+    let max_scroll = total.saturating_sub(inner_h);
+    let y = if app.sidebar_user_scrolled() {
+        app.sidebar_scroll().min(max_scroll)
+    } else {
+        0
+    };
+    let focused = app.scroll_focus() == Focus::Sidebar;
+    let block = Block::bordered()
+        .title(title)
+        .border_style(pane_border_style(focused));
+    f.render_widget(base.block(block).scroll((y, 0)), area);
+}
+
 /// Deterministically corrupt ~1/3 of glyphs (no RNG — seeded by position).
 pub fn scramble(s: &str, seed: usize) -> String {
     s.chars()
@@ -173,17 +211,7 @@ pub fn render(f: &mut Frame, app: &App) {
         f.render_widget(banner, story_area);
         // still render the sidebar so the layout doesn't jump
         if let Some(sa) = sidebar_area {
-            let (title, outs) = match app.tab() {
-                crate::app::Tab::Options => (" OPTIONS ", app.options_lines()),
-                crate::app::Tab::Journal => (" JOURNAL ", app.journal_lines()),
-            };
-            let lines: Vec<Line> = outs.iter().map(sidebar_line).collect();
-            f.render_widget(
-                Paragraph::new(lines)
-                    .wrap(Wrap { trim: false })
-                    .block(Block::bordered().title(title)),
-                sa,
-            );
+            render_sidebar(f, app, sa);
         }
         // input line
         let input = Paragraph::new(Line::from(format!("> {}", app.input())));
@@ -217,20 +245,15 @@ pub fn render(f: &mut Frame, app: &App) {
     } else {
         max_scroll
     };
-    let story = story_base.block(Block::bordered()).scroll((y, 0));
+    let story_focused = app.scroll_focus() == crate::app::Focus::Story;
+    let story = story_base
+        .block(Block::bordered().border_style(pane_border_style(story_focused)))
+        .scroll((y, 0));
     f.render_widget(story, story_area);
 
     // sidebar
     if let Some(sa) = sidebar_area {
-        let (title, outs) = match app.tab() {
-            crate::app::Tab::Options => (" OPTIONS ", app.options_lines()),
-            crate::app::Tab::Journal => (" JOURNAL ", app.journal_lines()),
-        };
-        let lines: Vec<Line> = outs.iter().map(sidebar_line).collect();
-        let side = Paragraph::new(lines)
-            .wrap(Wrap { trim: false })
-            .block(Block::bordered().title(title));
-        f.render_widget(side, sa);
+        render_sidebar(f, app, sa);
     }
 
     // input line
@@ -240,7 +263,7 @@ pub fn render(f: &mut Frame, app: &App) {
         "[F3] effects"
     };
     let hint = format!(
-        "[Tab] sidebar  [hold Space] fast  [F2] instant  {}  ['leave' exits]  [Esc] quit",
+        "[Tab] sidebar  [<-/-> focus]  [hold Space] fast  [F2] instant  {}  ['leave' exits]  [Esc] quit",
         fx_label
     );
     let input = Paragraph::new(Line::from(vec![
@@ -431,6 +454,62 @@ mod tests {
         };
         assert!(bold(&h), "section header should be bold");
         assert!(!bold(&i), "list item should not be bold");
+    }
+
+    #[test]
+    fn sidebar_scrolls_past_top_when_focused() {
+        use crate::app::{Focus, Key};
+        // 20 distinct option labels (via Enter steps) -> tall Options sidebar.
+        let branches: String = (1..=20)
+            .map(|i| format!(r#"Branch(keys:["k{0:02}"], target: Steps([ Enter("p{0:02}") ]))"#, i))
+            .collect::<Vec<_>>()
+            .join(", ");
+        let locs: String = (1..=20)
+            .map(|i| format!(r#""p{0:02}": ( commands: [] )"#, i))
+            .collect::<Vec<_>>()
+            .join(", ");
+        let content_str = format!(
+            r#"ContentPart(
+                locations: {{ "hub": ( prompt:[Line(Smobb,"PROMPT")], commands: [ {} ] ), {} }},
+                scenes: {{}},
+            )"#,
+            branches, locs
+        );
+        let c = content::from_str(&[content_str.as_str()]);
+        let mut app = App::new(Engine::new(c));
+        app.tick(web_time::Instant::now()); // reveal prompt + await; default tab = Options
+
+        // Small terminal so the sidebar (30% width) overflows its viewport.
+        let backend = TestBackend::new(70, 12);
+        let mut terminal = Terminal::new(backend).unwrap();
+
+        // Not scrolled: the very first options line "You can:" is visible.
+        terminal.draw(|f| render(f, &app)).unwrap();
+        let dump: String = terminal
+            .backend()
+            .buffer()
+            .content()
+            .iter()
+            .map(|c| c.symbol())
+            .collect();
+        assert!(dump.contains("You can:"), "top of sidebar visible before scrolling");
+
+        // Focus the sidebar and scroll well past the top.
+        app.key(Key::Right);
+        assert_eq!(app.scroll_focus(), Focus::Sidebar);
+        for _ in 0..6 {
+            app.key(Key::PageDown);
+        }
+        terminal.draw(|f| render(f, &app)).unwrap();
+        let dump: String = terminal
+            .backend()
+            .buffer()
+            .content()
+            .iter()
+            .map(|c| c.symbol())
+            .collect();
+        assert!(!dump.contains("You can:"), "scrolled past the top header");
+        assert!(dump.contains("- "), "still showing clamped option items, not blank");
     }
 
     #[test]
