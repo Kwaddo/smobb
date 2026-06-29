@@ -1,5 +1,22 @@
-use smobb_tui_core::app::Key;
+use smobb_tui_core::app::{Focus, Key};
+use smobb_tui_core::ui::STORY_PCT;
 use winit::keyboard::{Key as WKey, ModifiersState, NamedKey};
+
+/// Which pane sits under cursor x (physical px) given the window width. The
+/// sidebar occupies the right `SIDEBAR_PCT`% of the body; everything left is the
+/// story. Always `Story` when the sidebar is hidden. The ~1-cell border error is
+/// irrelevant for choosing a pane.
+pub fn pane_at(window_w: f64, cursor_x: f64, sidebar_visible: bool) -> Focus {
+    if !sidebar_visible {
+        return Focus::Story;
+    }
+    let boundary = window_w * STORY_PCT as f64 / 100.0;
+    if cursor_x >= boundary {
+        Focus::Sidebar
+    } else {
+        Focus::Story
+    }
+}
 
 /// Translate a winit logical key (+ current modifiers) into the app's `Key`.
 /// Returns `None` for keys the app ignores.
@@ -35,6 +52,17 @@ pub fn to_key(logical: &WKey, mods: ModifiersState) -> Option<Key> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn pane_at_picks_pane_under_cursor() {
+        // Hidden sidebar: always the story, regardless of x.
+        assert_eq!(pane_at(1000.0, 990.0, false), Focus::Story);
+        // 70/30 split at x=700 for a 1000px window.
+        assert_eq!(pane_at(1000.0, 0.0, true), Focus::Story);
+        assert_eq!(pane_at(1000.0, 699.0, true), Focus::Story);
+        assert_eq!(pane_at(1000.0, 700.0, true), Focus::Sidebar);
+        assert_eq!(pane_at(1000.0, 999.0, true), Focus::Sidebar);
+    }
 
     #[test]
     fn maps_named_keys() {

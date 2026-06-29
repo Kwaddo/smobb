@@ -57,6 +57,12 @@ const FLASH_MS: u64 = 120;
 /// Banner takeover duration (ms).
 const BANNER_MS: u64 = 1400;
 
+/// Apply a signed line delta to an unsigned scroll offset, clamped to
+/// `[0, u16::MAX]`. The render pass clamps the upper bound to content height.
+fn apply_delta(cur: u16, delta: i32) -> u16 {
+    (cur as i32 + delta).clamp(0, u16::MAX as i32) as u16
+}
+
 pub struct App {
     engine: Engine,
     transcript: Vec<Span>,
@@ -453,6 +459,23 @@ impl App {
         }
     }
 
+    /// Scroll a specific pane by `lines` (negative = toward the top). Focuses
+    /// the pane so the border highlight follows the wheel. The offset is only
+    /// nudged here; `ui::render` clamps it to the content height.
+    pub fn scroll_pane(&mut self, pane: Focus, lines: i32) {
+        self.scroll_focus = pane;
+        match pane {
+            Focus::Story => {
+                self.user_scrolled = true;
+                self.scroll = apply_delta(self.scroll, lines);
+            }
+            Focus::Sidebar => {
+                self.sidebar_user_scrolled = true;
+                self.sidebar_scroll = apply_delta(self.sidebar_scroll, lines);
+            }
+        }
+    }
+
     pub fn flash(&self) -> Option<Color> {
         if self.flash_until.is_some_and(|u| self.last_tick < u) {
             Some(self.flash_tone)
@@ -531,6 +554,28 @@ mod tests {
         let mut engine = Engine::new(c);
         engine.set_skip(true);
         App::new(engine)
+    }
+
+    #[test]
+    fn scroll_pane_focuses_moves_and_saturates() {
+        let mut app = app_fixture();
+
+        // Story: scrolling down moves the offset and focuses the story pane.
+        app.scroll_pane(Focus::Story, 3);
+        assert_eq!(app.scroll_focus(), Focus::Story);
+        assert!(app.user_scrolled());
+        assert_eq!(app.scroll(), 3);
+
+        // Upward over-scroll saturates at 0 (never wraps).
+        app.scroll_pane(Focus::Story, -10);
+        assert_eq!(app.scroll(), 0);
+
+        // Sidebar: drives the sidebar counter + focus + flag, independently.
+        app.scroll_pane(Focus::Sidebar, 5);
+        assert_eq!(app.scroll_focus(), Focus::Sidebar);
+        assert!(app.sidebar_user_scrolled());
+        assert_eq!(app.sidebar_scroll(), 5);
+        assert_eq!(app.scroll(), 0, "story offset untouched by sidebar scroll");
     }
 
     #[test]

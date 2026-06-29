@@ -11,6 +11,12 @@ use smobb_core::speaker::Color;
 
 const GLITCH_GLYPHS: &[char] = &['#', '%', '@', '&', '░', '▒', '▓', '*'];
 
+/// Body split: story / sidebar column widths in percent. Exposed so frontends
+/// (e.g. the desktop wheel hit-test) can map a cursor x to the pane under it
+/// without duplicating the split.
+pub const STORY_PCT: u16 = 70;
+pub const SIDEBAR_PCT: u16 = 30;
+
 /// Border style for a pane, brightened when it currently has scroll focus.
 fn pane_border_style(focused: bool) -> Style {
     if focused {
@@ -189,8 +195,11 @@ pub fn render(f: &mut Frame, app: &App) {
 
     // body columns: story (70%) + sidebar (30%) when visible
     let (story_area, sidebar_area): (Rect, Option<Rect>) = if app.sidebar_visible() {
-        let cols = Layout::horizontal([Constraint::Percentage(70), Constraint::Percentage(30)])
-            .split(body);
+        let cols = Layout::horizontal([
+            Constraint::Percentage(STORY_PCT),
+            Constraint::Percentage(SIDEBAR_PCT),
+        ])
+        .split(body);
         (cols[0], Some(cols[1]))
     } else {
         (body, None)

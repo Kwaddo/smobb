@@ -2165,6 +2165,8 @@ dependencies = [
  "dirs",
  "pollster",
  "ratatui-wgpu",
+ "serde",
+ "serde_json",
  "smobb-core",
  "smobb-tui-core",
  "web-time",
