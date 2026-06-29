@@ -52,6 +52,13 @@ impl Speaker {
             Speaker::System => "",
         }
     }
+    /// Whether consecutive lines from this speaker should be separated by a
+    /// blank spacer when rendered. SMOBB talks in unbroken all-caps; spacing
+    /// each sentence stops a long turn from reading as a tiring wall of
+    /// capitals. Other speakers stay tightly grouped.
+    pub fn spaced_turns(self) -> bool {
+        matches!(self, Speaker::Smobb)
+    }
     pub fn color(self) -> Color {
         match self {
             Speaker::Ali => Color::Aqua,

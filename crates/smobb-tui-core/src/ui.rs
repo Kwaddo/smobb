@@ -129,6 +129,11 @@ pub fn story_lines(transcript: &[crate::app::Span], glitch: bool) -> Vec<Line<'s
                     .fg(RColor::Rgb(120, 120, 120))
                     .add_modifier(Modifier::DIM | Modifier::BOLD),
             )));
+        } else if s.speaker == prev && s.speaker.map_or(false, |sp| sp.spaced_turns()) {
+            // Same speaker continuing a turn. Caps-heavy voices (SMOBB) get a
+            // blank spacer between each line so the turn reads as separate
+            // sentences rather than one wall of capitals.
+            lines.push(Line::from(""));
         }
         let mut style = Style::default().fg(to_rgb(s.color));
         if s.dim {
@@ -374,6 +379,34 @@ mod tests {
         // reset grouping: only one "ALI" header, no spacer before the second Ali line.
         assert_eq!(flat, vec!["ALI", "hi", "SYSTEM MSG", "again"]);
         assert_eq!(flat.iter().filter(|s| s.trim() == "ALI").count(), 1);
+    }
+
+    #[test]
+    fn smobb_turn_spaces_consecutive_lines() {
+        use crate::app::Span;
+        use smobb_core::speaker::{Color, Speaker};
+        let smobb = |t: &str| Span {
+            text: t.into(),
+            color: Color::White,
+            dim: false,
+            speaker: Some(Speaker::Smobb),
+        };
+        let t = vec![smobb("INCOMPETENT."), smobb("A LIAR."), smobb("A FAKE.")];
+        let lines = super::story_lines(&t, false);
+        let flat: Vec<String> = lines
+            .iter()
+            .map(|l| {
+                l.spans
+                    .iter()
+                    .map(|s| s.content.to_string())
+                    .collect::<String>()
+            })
+            .collect();
+        // one header, then each caps line separated by a blank spacer.
+        assert_eq!(
+            flat,
+            vec!["SMOBB", "INCOMPETENT.", "", "A LIAR.", "", "A FAKE."]
+        );
     }
 
     #[test]
