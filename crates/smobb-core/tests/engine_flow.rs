@@ -32,6 +32,8 @@ fn fixture_game_reaches_end() {
         .iter()
         .any(|o| matches!(o, Output::Line{text,..} if text=="INCOMPETENT.")));
     let _ = e.advance("end"); // back to hub
-    let out = e.advance("end"); // quit
+    let out = e.advance("end"); // hub "Quit" option asks first
+    assert!(!out.contains(&Output::End));
+    let out = e.advance("yes"); // confirm close
     assert!(out.contains(&Output::End));
 }

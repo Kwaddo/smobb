@@ -85,6 +85,9 @@ pub struct Engine {
     skip: bool,
     pending_prompt: Option<Vec<crate::scene::Branch>>,
     pending_gate: Option<crate::scene::GateSpec>,
+    /// Transient: a "close the game?" confirmation is awaiting yes/no. Never
+    /// persisted — a reload should never resume mid-confirmation.
+    pending_quit: bool,
     recap: crate::recap::Recap,
     decoded: Vec<(String, String)>,
     discovered: std::collections::BTreeSet<String>,
@@ -105,6 +108,7 @@ impl Engine {
             skip: false,
             pending_prompt: None,
             pending_gate: None,
+            pending_quit: false,
             recap: crate::recap::Recap::default(),
             decoded: Vec::new(),
             discovered: std::collections::BTreeSet::new(),
@@ -197,6 +201,31 @@ impl Engine {
         out
     }
 
+    /// The "close the game?" confirmation line + an input await. Emitting this
+    /// is always paired with setting `pending_quit`.
+    fn quit_prompt(&self) -> Vec<Output> {
+        vec![
+            Output::Line {
+                text: "CLOSE S.M.O.B.B.? YOUR PROGRESS IS SAVED. (yes / no)".into(),
+                color: crate::speaker::Speaker::System.color(),
+                speaker: Some(crate::speaker::Speaker::System),
+            },
+            Output::AwaitInput,
+        ]
+    }
+
+    /// Begin the close-the-game confirmation (e.g. from an Esc keypress in a
+    /// frontend). Returns the prompt to enqueue; the next `advance` resolves it.
+    pub fn request_quit(&mut self) -> Vec<Output> {
+        self.pending_quit = true;
+        self.quit_prompt()
+    }
+
+    /// Whether a close-the-game confirmation is currently awaiting yes/no.
+    pub fn quit_pending(&self) -> bool {
+        self.pending_quit
+    }
+
     /// Emit a location intro: Lines (paced by interval unless skip) and Pause beats.
     fn emit_intro(&self, steps: &[crate::scene::Step], out: &mut Vec<Output>) {
         use crate::scene::Step;
@@ -233,10 +262,28 @@ impl Engine {
 
     pub fn advance(&mut self, input: &str) -> Vec<Output> {
         let input = input.trim().to_lowercase();
-        // Universal escape: works the same from anywhere. Inside a dialogue/scene
-        // it aborts back to the current location's menu; at a menu it leaves the
-        // location (the hub quits the game).
-        if matches!(input.as_str(), "leave" | "exit" | "back" | "end" | "quit") {
+        // A pending "close the game?" confirmation owns the next input.
+        if self.pending_quit {
+            self.pending_quit = false;
+            return match crate::vocab::canonical(&input) {
+                Some("yes") => vec![Output::End],
+                Some("no") => {
+                    // Declined: drop any in-progress dialogue, back to the menu.
+                    self.pending_prompt = None;
+                    self.pending_gate = None;
+                    self.frames.clear();
+                    self.menu_prompt()
+                }
+                // Anything else: keep waiting on the confirmation.
+                _ => {
+                    self.pending_quit = true;
+                    self.quit_prompt()
+                }
+            };
+        }
+        // Navigation: step out of the current dialogue/location toward the hub.
+        // Works from anywhere and NEVER closes the game.
+        if matches!(input.as_str(), "leave" | "back") {
             if self.pending_prompt.is_some()
                 || self.pending_gate.is_some()
                 || !self.frames.is_empty()
@@ -251,7 +298,20 @@ impl Engine {
                 self.loc_stack.pop();
                 return self.menu_prompt();
             }
-            return vec![Output::End];
+            // Already at the hub root — there is nothing to leave.
+            return vec![
+                Output::Line {
+                    text: "YOU'RE AT THE START. TYPE 'QUIT' TO CLOSE THE GAME.".into(),
+                    color: crate::speaker::Speaker::System.color(),
+                    speaker: Some(crate::speaker::Speaker::System),
+                },
+                Output::AwaitInput,
+            ];
+        }
+        // Close the game — from anywhere — behind a confirmation.
+        if matches!(input.as_str(), "quit" | "exit" | "close" | "close game") {
+            self.pending_quit = true;
+            return self.quit_prompt();
         }
         if let Some(gate) = self.pending_gate.take() {
             let aff = crate::vocab::canonical(&input) == Some("yes");
@@ -260,9 +320,10 @@ impl Engine {
             let knows = self.eval_condition(&crate::scene::Condition::Knows(gate.code.clone()));
             let steps = if typed_code || (aff && knows) {
                 Some(gate.on_deploy.clone())
-            } else if aff {
-                Some(gate.on_missing.clone())
-            } else if neg {
+            } else if aff || neg {
+                // No prevention code in hand (or an explicit "no"): there is no
+                // separate warning. Route straight to the breach-not-deployed
+                // (decline) path. `on_missing` is intentionally never reached.
                 Some(gate.on_decline.clone())
             } else {
                 None
@@ -582,7 +643,9 @@ impl Engine {
                     return out;
                 }
                 Step::Quit => {
-                    out.push(Output::End);
+                    // The hub "Quit" option asks before actually closing.
+                    self.pending_quit = true;
+                    out.extend(self.quit_prompt());
                     return out;
                 }
                 Step::UnlockDecode => {
@@ -1035,7 +1098,12 @@ mod tests {
         assert!(out
             .iter()
             .any(|o| matches!(o, Output::Line{text,..} if text=="HUB")));
-        let out = e.advance("end"); // quit at hub
+        let out = e.advance("end"); // hub "Quit" option asks first
+        assert!(!out.contains(&Output::End));
+        assert!(out
+            .iter()
+            .any(|o| matches!(o, Output::Line{text,..} if text.contains("CLOSE S.M.O.B.B.?"))));
+        let out = e.advance("yes"); // confirm
         assert!(out.contains(&Output::End));
     }
 
@@ -1273,7 +1341,7 @@ mod tests {
     }
 
     #[test]
-    fn universal_exit_pops_location_and_quits_at_hub() {
+    fn back_pops_location_and_quit_confirms_at_hub() {
         use crate::content;
         let c = content::from_str(&[r#"ContentPart(
             locations: {
@@ -1286,11 +1354,13 @@ mod tests {
         e.set_skip(true);
         let _ = e.start();
         let _ = e.advance("ali");
-        let out = e.advance("exit"); // leave ali -> hub
+        let out = e.advance("back"); // navigation: leave ali -> hub, never closes
         assert!(out
             .iter()
             .any(|o| matches!(o, Output::Line{text,..} if text=="HUB")));
-        let out = e.advance("end"); // hub -> quit
+        let out = e.advance("quit"); // closing the game asks first
+        assert!(!out.contains(&Output::End));
+        let out = e.advance("yes"); // confirm
         assert!(out.contains(&Output::End));
     }
 
@@ -1697,13 +1767,19 @@ mod tests {
     }
 
     #[test]
-    fn gate_missing_when_affirmative_without_code() {
+    fn gate_missing_routes_to_decline_no_warning() {
+        // Affirmative without the prevention code: no warning path. Go straight
+        // to the breach-not-deployed (decline) outcome.
         let mut e = Engine::new(gate_fixture());
         e.set_skip(true);
         let _ = e.start();
         let _ = e.advance("breach"); // never learned the code
         let out = e.advance("yes");
         assert!(out
+            .iter()
+            .any(|o| matches!(o, Output::Line{text,..} if text == "IGNORED")));
+        // the warning path must NOT fire
+        assert!(!out
             .iter()
             .any(|o| matches!(o, Output::Line{text,..} if text == "NO CODE")));
     }
@@ -1929,7 +2005,51 @@ mod tests {
         let mut e = Engine::new(c);
         e.set_skip(true);
         let _ = e.start();
-        let out = e.advance("quit"); // the displayed "Quit" label must end the game at the hub
+        // "quit" asks for confirmation; only "yes" actually closes.
+        let out = e.advance("quit");
+        assert!(!out.contains(&Output::End));
+        assert!(out
+            .iter()
+            .any(|o| matches!(o, Output::Line{text,..} if text.contains("CLOSE S.M.O.B.B.?"))));
+        let out = e.advance("yes");
         assert!(out.contains(&Output::End));
+    }
+
+    #[test]
+    fn quit_confirmation_declines_to_menu() {
+        use crate::content;
+        let c = content::from_str(&[r#"ContentPart(
+            locations: { "hub": ( prompt:[Line(Smobb,"HUB")], commands: [
+                Branch(keys:["end"], target: Steps([ Quit ])),
+            ] ) },
+            scenes: {},
+        )"#]);
+        let mut e = Engine::new(c);
+        e.set_skip(true);
+        let _ = e.start();
+        let _ = e.advance("quit"); // ask
+        let out = e.advance("no"); // decline -> back to the hub menu, game stays open
+        assert!(!out.contains(&Output::End));
+        assert!(out
+            .iter()
+            .any(|o| matches!(o, Output::Line{text,..} if text=="HUB")));
+    }
+
+    #[test]
+    fn leave_at_hub_root_hints_instead_of_quitting() {
+        use crate::content;
+        let c = content::from_str(&[r#"ContentPart(
+            locations: { "hub": ( prompt:[Line(Smobb,"HUB")], commands: [] ) },
+            scenes: {},
+        )"#]);
+        let mut e = Engine::new(c);
+        e.set_skip(true);
+        let _ = e.start();
+        let out = e.advance("leave"); // nothing to leave at the root
+        assert!(!out.contains(&Output::End));
+        assert!(out
+            .iter()
+            .any(|o| matches!(o, Output::Line{text,..} if text.contains("TYPE 'QUIT'"))));
+        assert!(matches!(out.last().unwrap(), Output::AwaitInput));
     }
 }

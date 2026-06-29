@@ -154,6 +154,23 @@ impl App {
     pub fn quit(&self) -> bool {
         self.quit
     }
+
+    /// Begin the close-the-game confirmation (Esc / Ctrl-C). The game does not
+    /// close until the player answers "yes" — routed through the engine like
+    /// any typed input. A second Esc while the prompt is up dismisses it.
+    fn request_quit(&mut self) {
+        if self.quit {
+            return;
+        }
+        if self.engine.quit_pending() {
+            let out = self.engine.advance("no");
+            self.enqueue(out);
+            return;
+        }
+        let out = self.engine.request_quit();
+        self.queue.clear(); // surface the confirmation immediately
+        self.enqueue(out);
+    }
     pub fn transcript(&self) -> &[Span] {
         &self.transcript
     }
@@ -377,7 +394,7 @@ impl App {
 
     pub fn key(&mut self, key: Key) {
         match key {
-            Key::CtrlC | Key::Esc => self.quit = true,
+            Key::CtrlC | Key::Esc => self.request_quit(),
             Key::Enter => self.submit(),
             Key::Backspace => self.backspace(),
             Key::Tab => {
@@ -753,7 +770,26 @@ mod tests {
         app.key(Key::F1);
         assert!(!app.sidebar_visible());
         app.key(Key::Esc);
+        assert!(!app.quit()); // Esc asks for confirmation first
+        app.tick(web_time::Instant::now()); // reveal the confirm prompt + await
+        app.submit_for_test("yes"); // confirm -> enqueues End
+        app.tick(web_time::Instant::now()); // process End
         assert!(app.quit());
+    }
+
+    #[test]
+    fn esc_then_decline_keeps_running() {
+        let mut app = app_fixture();
+        app.key(Key::Esc);
+        assert!(!app.quit());
+        app.tick(web_time::Instant::now()); // reveal the confirm prompt + await
+        app.submit_for_test("no"); // decline
+        app.tick(web_time::Instant::now());
+        assert!(!app.quit());
+        // a second Esc re-opens the confirmation
+        app.key(Key::Esc);
+        app.tick(web_time::Instant::now());
+        assert!(!app.quit());
     }
 
     #[test]
