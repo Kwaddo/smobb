@@ -9,6 +9,7 @@ use std::num::NonZeroU32;
 use std::sync::Arc;
 use std::time::{Duration, Instant as StdInstant};
 
+use ratatui_wgpu::ratatui::style::Color as WgpuColor;
 use ratatui_wgpu::ratatui::Terminal;
 use ratatui_wgpu::{Builder, Dimensions, Font, WgpuBackend};
 use smobb_core::content;
@@ -63,6 +64,10 @@ impl ApplicationHandler for AppHandler {
                 // proportional DejaVu Sans as fallback for symbol glyphs the
                 // mono face may lack (e.g. the pencil/gear dingbats).
                 .with_fonts([Font::new(dejavu::sans::regular()).expect("fallback font")])
+                // ratatui-wgpu defaults to a WHITE background; a terminal's
+                // `Reset` is dark, so recolor the default cell to match.
+                .with_bg_color(WgpuColor::Rgb(8, 8, 8))
+                .with_fg_color(WgpuColor::Rgb(220, 220, 220))
                 .with_font_size_px(16)
                 .with_width_and_height(Dimensions { width, height })
                 .build_with_target(window.clone()),
