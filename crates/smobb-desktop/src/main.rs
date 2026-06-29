@@ -13,7 +13,7 @@ use std::time::{Duration, Instant as StdInstant};
 
 use ratatui_wgpu::ratatui::style::Color as WgpuColor;
 use ratatui_wgpu::ratatui::Terminal;
-use ratatui_wgpu::{Builder, Dimensions, Font, Fonts, WgpuBackend};
+use ratatui_wgpu::{Builder, Dimensions, Font, WgpuBackend};
 use settings::{Settings, FONT_DEFAULT, FONT_MAX, FONT_MIN, FONT_STEP};
 use smobb_core::content;
 use smobb_core::engine::Engine;
@@ -32,20 +32,36 @@ const WHEEL_LINES: i32 = 3;
 
 type DesktopTerminal = Terminal<WgpuBackend<'static, 'static>>;
 
-/// Build the mono font set at `px`. Mirrors the faces used at startup so a
-/// runtime font resize keeps the same bold/italic coverage. The DejaVu faces are
-/// `'static` byte slices, so the returned set has no borrow to manage.
-fn build_fonts(px: u32) -> Fonts<'static> {
-    let mut fonts = Fonts::new(
-        Font::new(dejavu::sans_mono::regular()).expect("mono font"),
-        px,
-    );
-    fonts.add_bold_fonts([Font::new(dejavu::sans_mono::bold()).expect("mono bold")]);
-    fonts.add_italic_fonts([Font::new(dejavu::sans_mono::oblique()).expect("mono italic")]);
-    fonts.add_bold_italic_fonts([
-        Font::new(dejavu::sans_mono::bold_oblique()).expect("mono bold-italic")
-    ]);
-    fonts
+/// Build a fresh terminal + wgpu backend for `window` at font size `px`. Used at
+/// startup and on every font change — rebuilding from scratch is the reliable
+/// way to resize the font, since the backend's in-place `update_fonts` leaves
+/// per-cell render caches stale (it can't tell the grid changed) and corrupts
+/// the screen. All faces MUST be monospace with the same aspect ratio: the
+/// backend sets the cell width to the *minimum* char width across every font, so
+/// a proportional fallback would shrink the cell and overlap glyphs.
+fn build_terminal(window: Arc<Window>, px: u32) -> DesktopTerminal {
+    let size = window.inner_size();
+    let width = NonZeroU32::new(size.width.max(1)).unwrap();
+    let height = NonZeroU32::new(size.height.max(1)).unwrap();
+
+    let backend = pollster::block_on(
+        Builder::from_font(Font::new(dejavu::sans_mono::regular()).expect("mono font"))
+            .with_bold_fonts([Font::new(dejavu::sans_mono::bold()).expect("mono bold")])
+            .with_italic_fonts([Font::new(dejavu::sans_mono::oblique()).expect("mono italic")])
+            .with_bold_italic_fonts([
+                Font::new(dejavu::sans_mono::bold_oblique()).expect("mono bold-italic")
+            ])
+            // ratatui-wgpu defaults to a WHITE background; a terminal's `Reset`
+            // is dark, so recolor the default cell to match.
+            .with_bg_color(WgpuColor::Rgb(8, 8, 8))
+            .with_fg_color(WgpuColor::Rgb(220, 220, 220))
+            .with_font_size_px(px)
+            .with_width_and_height(Dimensions { width, height })
+            .build_with_target(window),
+    )
+    .expect("build wgpu backend");
+
+    Terminal::new(backend).expect("terminal")
 }
 
 struct AppHandler {
@@ -81,6 +97,26 @@ impl AppHandler {
         }
     }
 
+    /// Draw one frame synchronously (story + optional settings overlay). Used
+    /// after a state change that must be reflected immediately instead of
+    /// waiting for the next queued redraw (avoids a stale/black frame).
+    fn redraw_now(&mut self) {
+        let Self {
+            terminal,
+            app,
+            settings,
+            ..
+        } = self;
+        if let Some(t) = terminal.as_mut() {
+            let _ = t.draw(|f| {
+                ui::render(f, app);
+                if settings.open {
+                    settings.render(f);
+                }
+            });
+        }
+    }
+
     fn persist(&self) {
         prefs::save(&prefs::WindowPrefs {
             font_px: self.font_px,
@@ -88,25 +124,18 @@ impl AppHandler {
         });
     }
 
-    /// Rebuild the backend fonts at `px` and re-fit the grid to the window.
+    /// Resize the font by rebuilding the backend from scratch. In-place
+    /// `update_fonts` leaves the backend's per-cell render caches stale — it only
+    /// invalidates them when `resize` *detects* a grid change, but a font change
+    /// keeps the same pixel size so the change goes unseen and the grid corrupts.
+    /// A fresh backend always starts clean.
     fn apply_font(&mut self, px: u32) {
         self.font_px = px;
         self.settings.font_px = px;
-        if let (Some(t), Some(w)) = (self.terminal.as_mut(), self.window.as_ref()) {
-            let backend = t.backend_mut();
-            backend.update_fonts(build_fonts(px));
-            // The grid's column/row count and the GPU render target are only
-            // rebuilt inside `resize`, which early-returns when the pixel size is
-            // unchanged. A font change keeps the same window size, so bounce the
-            // width by one pixel to force a rebuild for the new cell size —
-            // otherwise the grid keeps the old cell count while glyphs render at
-            // the new size and the screen corrupts.
-            let size = w.inner_size();
-            let (width, height) = (size.width.max(1), size.height.max(1));
-            backend.resize(width.saturating_sub(1).max(1), height);
-            backend.resize(width, height);
+        if let Some(w) = self.window.clone() {
+            self.terminal = Some(build_terminal(w, px));
         }
-        self.request_redraw();
+        self.redraw_now();
         self.persist();
     }
 
@@ -191,33 +220,14 @@ impl ApplicationHandler for AppHandler {
         if self.fullscreen {
             window.set_fullscreen(Some(Fullscreen::Borderless(None)));
         }
-        let size = window.inner_size();
-        let width = NonZeroU32::new(size.width.max(1)).unwrap();
-        let height = NonZeroU32::new(size.height.max(1)).unwrap();
 
-        let backend = pollster::block_on(
-            Builder::from_font(Font::new(dejavu::sans_mono::regular()).expect("mono font"))
-                // All faces MUST be monospace with the same aspect ratio: the
-                // backend sets the grid cell width to the *minimum* char width
-                // across every font, so a proportional fallback would shrink the
-                // cell and make glyphs overlap. Use the mono bold/italic faces.
-                .with_bold_fonts([Font::new(dejavu::sans_mono::bold()).expect("mono bold")])
-                .with_italic_fonts([Font::new(dejavu::sans_mono::oblique()).expect("mono italic")])
-                .with_bold_italic_fonts([
-                    Font::new(dejavu::sans_mono::bold_oblique()).expect("mono bold-italic")
-                ])
-                // ratatui-wgpu defaults to a WHITE background; a terminal's
-                // `Reset` is dark, so recolor the default cell to match.
-                .with_bg_color(WgpuColor::Rgb(8, 8, 8))
-                .with_fg_color(WgpuColor::Rgb(220, 220, 220))
-                .with_font_size_px(self.font_px)
-                .with_width_and_height(Dimensions { width, height })
-                .build_with_target(window.clone()),
-        )
-        .expect("build wgpu backend");
-
-        self.terminal = Some(Terminal::new(backend).expect("terminal"));
+        self.terminal = Some(build_terminal(window.clone(), self.font_px));
         self.window = Some(window);
+
+        // Reveal the first frame immediately so the window isn't blank until the
+        // event loop happens to tick.
+        self.app.tick(Instant::now());
+        self.redraw_now();
     }
 
     fn window_event(&mut self, event_loop: &ActiveEventLoop, _id: WindowId, event: WindowEvent) {
@@ -287,23 +297,7 @@ impl ApplicationHandler for AppHandler {
                 self.app.key(key);
                 self.request_redraw();
             }
-            WindowEvent::RedrawRequested => {
-                // disjoint field borrows so the draw closure can read `app`
-                let Self {
-                    terminal,
-                    app,
-                    settings,
-                    ..
-                } = self;
-                if let Some(t) = terminal.as_mut() {
-                    let _ = t.draw(|f| {
-                        ui::render(f, app);
-                        if settings.open {
-                            settings.render(f);
-                        }
-                    });
-                }
-            }
+            WindowEvent::RedrawRequested => self.redraw_now(),
             _ => {}
         }
     }
