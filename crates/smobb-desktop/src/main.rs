@@ -1,3 +1,4 @@
+mod input;
 mod save;
 
 fn main() {
