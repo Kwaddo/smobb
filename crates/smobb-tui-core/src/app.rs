@@ -270,6 +270,28 @@ impl App {
             return;
         }
         let cmd = std::mem::take(&mut self.input);
+        // Frontend-owned meta-commands, resolved through the canonical registry
+        // so every alias (sm, rp, ...) works and matches the help text.
+        match smobb_core::vocab::canonical(&cmd) {
+            Some("skipmode") => {
+                let s = self.engine.skip();
+                self.engine.set_skip(!s);
+                self.transcript.push(Span {
+                    text: format!("  \u{2699} skip mode: {}", if !s { "on" } else { "off" }),
+                    color: Color::White,
+                    dim: true,
+                    speaker: None,
+                });
+                self.dirty = true;
+                return;
+            }
+            Some("recap") | Some("journal") => {
+                self.tab = Tab::Journal;
+                self.sidebar_visible = true;
+                return;
+            }
+            _ => {}
+        }
         let outputs = self.engine.advance(&cmd);
         self.enqueue(outputs);
         self.dirty = true; // a command may have changed journal state
@@ -772,6 +794,41 @@ mod tests {
         app.key(Key::F3);
         assert!(app.reduced_effects());
         assert!(app.dirty());
+    }
+
+    #[test]
+    fn typed_skipmode_toggles_skip_without_engine_advance() {
+        use smobb_core::content;
+        use smobb_core::engine::Engine;
+        use web_time::Instant;
+        let c = content::from_str(&[r#"ContentPart(
+            locations: { "hub": ( prompt:[Line(Smobb,"P")], commands: [] ) },
+            scenes: {},
+        )"#]);
+        let mut app = App::new(Engine::new(c)); // skip starts off
+        app.tick(Instant::now());
+        assert!(app.awaiting());
+        app.submit_for_test("sm"); // alias of skipmode
+                                   // still awaiting (no engine advance / no menu re-run), and skip flipped on
+        assert!(app.awaiting());
+        app.submit_for_test("sm"); // toggle back off
+        assert!(app.awaiting());
+    }
+
+    #[test]
+    fn typed_recap_opens_journal_tab() {
+        use smobb_core::content;
+        use smobb_core::engine::Engine;
+        use web_time::Instant;
+        let c = content::from_str(&[r#"ContentPart(
+            locations: { "hub": ( prompt:[Line(Smobb,"P")], commands: [] ) },
+            scenes: {},
+        )"#]);
+        let mut app = App::new(Engine::new(c));
+        app.tick(Instant::now());
+        app.submit_for_test("rp"); // alias of recap
+        assert_eq!(app.tab(), Tab::Journal);
+        assert!(app.sidebar_visible());
     }
 
     #[test]
