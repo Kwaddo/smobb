@@ -24,7 +24,7 @@ ContentPart(
                 Branch(keys: ["recap", "rp"], target: Steps([])),
                 Branch(keys: ["skipmode", "sm"], target: Steps([])),
                 Branch(keys: ["interval", "in"], target: Steps([
-                    Line(System, "Interval is configured in the app."),
+                    Line(System, "Reading speed: hold Space (or Shift) to fast-forward; press F2 for instant text."),
                 ])),
                 Branch(keys: ["play", "pl"], target: Steps([
                     Line(System, "For how to play, open the guide: type 'guide' then 'game'."),

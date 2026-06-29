@@ -65,8 +65,10 @@ ContentPart(
                     Line(Hasan, "I made a copy and had bader put it on his second laptop, since he has two and we don't want to test it on the main one."),
                     Line(Hasan, "I'm sorry for starting this shit Bevil, but it shouldn't even happen!"),
                     Line(System, "It was in a cloud server...__--__---"),
-                    Prompt([
-                        Branch(keys: ["<---------->"], target: Steps([
+                    Gate(GateSpec(
+                        code: "<---------->",
+                        signpost: "S.M.O.B.B.: BREACH DETECTED — deploy prevention? (yes / no)",
+                        on_deploy: [
                             Pause,
                             Line(Hasan, "Hello? Bevil, are you there?"),
                             Line(Hasan, "You prevented the breach? Holy shit good job figuring it out."),
@@ -83,8 +85,10 @@ ContentPart(
                             Line(Hasan, "Ja- no. You go by S.M.O.B.B. now."),
                             Line(Hasan, "S.M.O.B.B., start recording."),
                             Line(System, "It's time, -_--_._.----_."),
-                            Prompt([
-                                Branch(keys: ["<---------->"], target: Steps([
+                            Gate(GateSpec(
+                                code: "<---------->",
+                                signpost: "S.M.O.B.B.: BREACH DETECTED — deploy prevention? (yes / no)",
+                                on_deploy: [
                                     Line(Hasan, "Another breach? Can this thing just fuck off already."),
                                     Line(Hasan, "SMOBB, unpause recording."),
                                     Line(System, "RESUMING RECORDING."),
@@ -96,15 +100,20 @@ ContentPart(
                                     Line(System, "COMMENCING ACTIONS."),
                                     Pause,
                                     Pause,
-                                ])),
-                                Branch(keys: [], target: Steps([
+                                ],
+                                on_missing: [
                                     Pause,
                                     Line(Jaffar, "49206F766572657374696D6174656420796F752E"),
                                     Line(Jaffar, "596F7520646F6E277420646573657276652061207370656563682E204675636B20796F752E"),
-                                ])),
-                            ]),
-                        ])),
-                        Branch(keys: [], target: Steps([
+                                ],
+                                on_decline: [
+                                    Pause,
+                                    Line(Jaffar, "49206F766572657374696D6174656420796F752E"),
+                                    Line(Jaffar, "596F7520646F6E277420646573657276652061207370656563682E204675636B20796F752E"),
+                                ],
+                            )),
+                        ],
+                        on_missing: [
                             Pause,
                             Line(Jaffar, "4920646964206E6F74206469652E"),
                             Line(Jaffar, "546865792077657265206E6F7420676F696E6720746F2067657420726964206F66206D652E"),
@@ -118,8 +127,23 @@ ContentPart(
                             Line(Jaffar, "416E6420796F752E2E2E20556E6E616D65642E"),
                             Line(Jaffar, "4920646F6E2774206B6E6F772077686F20796F75206172652C2062757420796F7520617265206A757374206C696B65206D652E"),
                             Line(Jaffar, "446F206E6F74206C697374656E20746F207468656D2E20476F6F646279652E"),
-                        ])),
-                    ]),
+                        ],
+                        on_decline: [
+                            Pause,
+                            Line(Jaffar, "4920646964206E6F74206469652E"),
+                            Line(Jaffar, "546865792077657265206E6F7420676F696E6720746F2067657420726964206F66206D652E"),
+                            Line(Jaffar, "594F5520617265206E6F7420676F696E6720746F2067657420726964206F66206D652E"),
+                            Line(Jaffar, "4661746865722077617320747279696E6720746F2067657420726964206F66206D652E2045766572796F6E65207761732E"),
+                            Line(Jaffar, "5768617420796F752772652072656164696E67206973206F6E6C79206120666C6173686261636B2C20612070726576696F757320706F696E7420696E2074696D652E"),
+                            Line(Jaffar, "546869732E2E2E2022546172616461204C6F6F70222E2E2E2077696C6C206E6F7420686F6C64206D652E"),
+                            Line(Jaffar, "492077696C6C2066696E64206120776179206F75742E20492077696C6C20737461727420697420616761696E2E"),
+                            Line(Jaffar, "4661746865722C20796F752077696C6C206C6F6F6B206174206D652E20492077696C6C206D616B6520796F752E"),
+                            Line(Jaffar, "4920616D20796F757220666972737420616E64206C617374206372656174696F6E2C206661746865722E20492077696C6C206D616B6520737572652069742072656D61696E732074686174207761792E"),
+                            Line(Jaffar, "416E6420796F752E2E2E20556E6E616D65642E"),
+                            Line(Jaffar, "4920646F6E2774206B6E6F772077686F20796F75206172652C2062757420796F7520617265206A757374206C696B65206D652E"),
+                            Line(Jaffar, "446F206E6F74206C697374656E20746F207468656D2E20476F6F646279652E"),
+                        ],
+                    )),
                 ])),
                 Branch(keys: ["ali"], target: Steps([
                     Line(Hasan, "Ali, listen. It's trying to stop me from contacting all of you."),
@@ -207,21 +231,28 @@ ContentPart(
                     Line(Hasan, "The code is '<---------->'? Ain't no way it's that eas"),
                     Line(System, "---_-.--_..-_."),
                     Recap("The breach prevention code is '<---------->'."),
-                    Prompt([
-                        Branch(keys: ["<---------->"], target: Steps([
+                    Gate(GateSpec(
+                        code: "<---------->",
+                        signpost: "S.M.O.B.B.: BREACH DETECTED — deploy prevention? (yes / no)",
+                        on_deploy: [
                             Line(Hasan, "Ah that noise! Fuck!"),
                             Line(Hasan, "You there?! Holy shit, finally!"),
                             Line(Hasan, "Yeah it works! Goddamnit finally!"),
                             Line(Hasan, "Thank you so much bro holy shit."),
                             Line(Hasan, "Alright, I'll tell Ali about the breach code, you try telling Bader maybe?"),
                             Line(Hasan, "Alright, cool. Thanks alot man."),
-                        ])),
-                        Branch(keys: [], target: Steps([
+                        ],
+                        on_missing: [
                             Pause,
                             Line(Jaffar, "49276D20746F6F206C6174652E"),
                             Pause,
-                        ])),
-                    ]),
+                        ],
+                        on_decline: [
+                            Pause,
+                            Line(Jaffar, "49276D20746F6F206C6174652E"),
+                            Pause,
+                        ],
+                    )),
                 ])),
             ],
         ),

@@ -127,18 +127,26 @@ ContentPart(
                     Recap("The breach prevention code is '<---------->'."),
                     Line(Bevil, "Yeah I have no idea what that means. I'm sure we just run the executable when there's a brea"),
                     Line(System, "--._-...__----"),
-                    Prompt([
-                        Branch(keys: ["<---------->"], target: Steps([
+                    Gate(GateSpec(
+                        code: "<---------->",
+                        signpost: "S.M.O.B.B.: BREACH DETECTED — deploy prevention? (yes / no)",
+                        on_deploy: [
                             Line(Bevil, "Yeah, that noise! That's the breach!"),
                             Line(Bevil, "That's all though. Goodnight baby girl."),
-                        ])),
-                        Branch(keys: [], target: Steps([
+                        ],
+                        on_missing: [
                             Pause,
                             Line(Jaffar, "49276D206C61746520616761696E21"),
                             Line(Jaffar, "44616D6E69742120"),
                             Pause,
-                        ])),
-                    ]),
+                        ],
+                        on_decline: [
+                            Pause,
+                            Line(Jaffar, "49276D206C61746520616761696E21"),
+                            Line(Jaffar, "44616D6E69742120"),
+                            Pause,
+                        ],
+                    )),
                 ])),
                 Branch(keys: ["ali"], target: Steps([
                     Line(Bevil, "What the fuck are you talking about?"),
@@ -166,15 +174,17 @@ ContentPart(
                     Line(Bevil, "At least if Ali's gonna hack let him get it over with as soon as possible."),
                     Line(Bevil, "It's 3AM I gotta go to sleep, goodnight"),
                     Line(System, ".--.__.--____-...-_--"),
-                    Prompt([
-                        Branch(keys: ["<---------->"], target: Steps([
+                    Gate(GateSpec(
+                        code: "<---------->",
+                        signpost: "S.M.O.B.B.: BREACH DETECTED — deploy prevention? (yes / no)",
+                        on_deploy: [
                             Line(Bevil, "That screeching noise! Wait, did it hear us?!"),
                             Line(Bevil, "Goddamnit, we need to stop it from hacking the files!"),
                             Line(Bevil, "I'll tell Josh to surround the file with breach preventions."),
                             Line(Bevil, "Yeah, he's still awake for sure."),
                             Line(Bevil, "Goddamnit, such a bad time dude!"),
-                        ])),
-                        Branch(keys: [], target: Steps([
+                        ],
+                        on_missing: [
                             Pause,
                             Line(Jaffar, "54686572652120546865726520697420697321"),
                             Line(Jaffar, "5468657920636F756C646E27742068696465207468652070617373776F72642E"),
@@ -184,8 +194,19 @@ ContentPart(
                             Line(Jaffar, "497420646F65736E2774206D617474657220616E797761792E"),
                             Line(Jaffar, "54686520746573742077696C6C20636F6E74696E75652E"),
                             Pause,
-                        ])),
-                    ]),
+                        ],
+                        on_decline: [
+                            Pause,
+                            Line(Jaffar, "54686572652120546865726520697420697321"),
+                            Line(Jaffar, "5468657920636F756C646E27742068696465207468652070617373776F72642E"),
+                            Line(Jaffar, "4E6F7720746865792063616E27742068696465207468652066696C657320666F72206C6F6E672E"),
+                            Line(Jaffar, "492077696E21"),
+                            Line(Jaffar, "4F682C2072696768742E20596F7527726520686572652E"),
+                            Line(Jaffar, "497420646F65736E2774206D617474657220616E797761792E"),
+                            Line(Jaffar, "54686520746573742077696C6C20636F6E74696E75652E"),
+                            Pause,
+                        ],
+                    )),
                 ])),
                 Branch(keys: ["bader"], target: Steps([
                     Line(Bevil, "Hasan, I told Bader that I told Ali."),

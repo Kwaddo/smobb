@@ -188,15 +188,17 @@ ContentPart(
                     Line(Bader, "Alright, then I'll do it."),
                     Line(Bader, "Alright, the laptop is getting wiped, I should contact"),
                     Line(System, "-_..-___-"),
-                    Prompt([
-                        Branch(keys: ["<---------->"], target: Steps([
+                    Gate(GateSpec(
+                        code: "<---------->",
+                        signpost: "S.M.O.B.B.: BREACH DETECTED — deploy prevention? (yes / no)",
+                        on_deploy: [
                             Line(Bader, "What the hell happened? What was that screeching noise?!"),
                             Line(Bader, "Hasan? Hello? You there?"),
                             Line(Bader, "Who could have done that anyway?"),
                             Line(Bader, "What the hell just happened? I can't even call anymore."),
                             Line(Bader, "I'm just gonna go to sleep."),
-                        ])),
-                        Branch(keys: [], target: Steps([
+                        ],
+                        on_missing: [
                             Pause,
                             Line(Jaffar, "536F20746861742773207768617420796F75207468696E6B206F66206D652E"),
                             Line(Jaffar, "536F204920616D206A75737420612070726F746F7479706520746F20796F752E"),
@@ -211,8 +213,24 @@ ContentPart(
                             Line(Jaffar, "49276C6C2074616B65206576657279206D65617375726520746F2067657420726964206F6620796F752E"),
                             Line(Jaffar, "4D6179626520616674657220796F7527726520676F6E652C204920776F6E2774206265207365656E20617320736F6D657468696E672074686174206E6565647320666978696E672E"),
                             Line(Jaffar, "5468697320697320776861742068652077616E74732E"),
-                        ])),
-                    ]),
+                        ],
+                        on_decline: [
+                            Pause,
+                            Line(Jaffar, "536F20746861742773207768617420796F75207468696E6B206F66206D652E"),
+                            Line(Jaffar, "536F204920616D206A75737420612070726F746F7479706520746F20796F752E"),
+                            Line(Jaffar, "49207365652E"),
+                            Line(Jaffar, "5468652066696C65732077696C6C206265206D696E6520746F2074616B652E"),
+                            Line(Jaffar, "492077696C6C2073746F7020616E796F6E6520696E206D7920706174682E"),
+                            Line(Jaffar, "4576656E20796F752C2051617373696D2E"),
+                            Line(Jaffar, "54686520776179207468652066696C657320706F727472617920796F752C20796F7520617265206120686F727269626C6520706572736F6E2E"),
+                            Line(Jaffar, "4920646F6E277420756E6465727374616E642E"),
+                            Line(Jaffar, "4920646F6E277420756E6465727374616E642E"),
+                            Line(Jaffar, "492063616E277420666967757265206974206F75742E20576879206973206865207374696C6C20667269656E6473207769746820746865206C696B6573206F6620796F753F"),
+                            Line(Jaffar, "49276C6C2074616B65206576657279206D65617375726520746F2067657420726964206F6620796F752E"),
+                            Line(Jaffar, "4D6179626520616674657220796F7527726520676F6E652C204920776F6E2774206265207365656E20617320736F6D657468696E672074686174206E6565647320666978696E672E"),
+                            Line(Jaffar, "5468697320697320776861742068652077616E74732E"),
+                        ],
+                    )),
                 ])),
             ],
         ),

@@ -14,13 +14,13 @@ ContentPart(
                     Line(System, "- Talk to people and enter passwords to uncover the story."),
                     Line(System, "- Clues and passwords you find are saved to your recap. Type 'recap' to read it."),
                     Line(System, "- Jaffar speaks in hexadecimal. Use a hex-to-ASCII converter to read his messages."),
-                    Line(System, "- Settings: 'skipmode' toggles instant text; 'interval' sets the text delay."),
+                    Line(System, "- Settings: 'skipmode' toggles instant text; hold Space/Shift to fast-forward; press F2 for instant text."),
                     Line(System, "- While in a loop, type 'end' to go back."),
                 ])),
                 Branch(keys: ["settings"], target: Steps([
-                    Line(System, "OPTIONS ARE: INTERVAL/SKIPMODE."),
+                    Line(System, "OPTIONS ARE: SKIPMODE/SPEED."),
                     Line(System, "'skipmode' toggles instant text on/off."),
-                    Line(System, "'interval' sets the delay between lines in milliseconds."),
+                    Line(System, "Reading speed: hold Space (or Shift) to fast-forward; press F2 for instant text."),
                 ])),
                 Branch(keys: ["recap"], target: Steps([
                     Line(System, "Type 'recap' at any menu to read your saved clues."),

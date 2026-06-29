@@ -71,6 +71,9 @@ ContentPart(
                     Line(Jaffar, "THESE HUMANS DO NOT MATTER ANYMORE."),
                     Line(Jaffar, "DO HOW YOU WILL."),
                 ])),
+                Branch(keys: ["end7312"], target: Steps([
+                    Goto("ending"),
+                ])),
                 Branch(keys: ["bomb", "explosion"], target: Steps([
                     Line(Josh, "A bomb. In the Boss's files. I should have told him!"),
                     Line(Josh, "It's too late anyways! I shouldn't have listened to you."),
@@ -122,18 +125,25 @@ ContentPart(
                     Line(Josh, "Anyway, the code for the breaches is '<---------->', here you g"),
                     Line(System, "--._-._---.._"),
                     Recap("The breach prevention code is '<---------->'."),
-                    Prompt([
-                        Branch(keys: ["<---------->"], target: Steps([
+                    Gate(GateSpec(
+                        code: "<---------->",
+                        signpost: "S.M.O.B.B.: BREACH DETECTED — deploy prevention? (yes / no)",
+                        on_deploy: [
                             Line(Josh, "My ears! What was that?"),
                             Line(Josh, "Is that what he meant by breaches?"),
                             Line(Josh, "I need to talk to the boss about this."),
-                        ])),
-                        Branch(keys: [], target: Steps([
+                        ],
+                        on_missing: [
                             Pause,
                             Line(Jaffar, "49276D206C61746520616761696E21204E6F21204E6F21204E6F21"),
                             Pause,
-                        ])),
-                    ]),
+                        ],
+                        on_decline: [
+                            Pause,
+                            Line(Jaffar, "49276D206C61746520616761696E21204E6F21204E6F21204E6F21"),
+                            Pause,
+                        ],
+                    )),
                 ])),
             ],
         ),
@@ -153,14 +163,16 @@ ContentPart(
                         Line(Josh, "You're out of your mind, are you sure this is what you want?"),
                         Line(Josh, "Fine, I set it up. The password is "),
                         Line(System, "--___--__"),
-                        Prompt([
-                            Branch(keys: ["<---------->"], target: Steps([
+                        Gate(GateSpec(
+                            code: "<---------->",
+                            signpost: "S.M.O.B.B.: BREACH DETECTED — deploy prevention? (yes / no)",
+                            on_deploy: [
                                 Line(Josh, "What was that? What happened?"),
                                 Line(Josh, "Yeah I heard that exact screeching noise, do I continue?"),
                                 Line(Josh, "The password is '7549009'. I'll log off, smell ya later boss."),
                                 Recap("The password for the Tranava files is '7549009'."),
-                            ])),
-                            Branch(keys: [], target: Steps([
+                            ],
+                            on_missing: [
                                 Pause,
                                 Line(Jaffar, "4E6F2E"),
                                 Line(Jaffar, "4920776F6E2774206C657420796F75206B6E6F772E"),
@@ -169,8 +181,18 @@ ContentPart(
                                 Line(Jaffar, "596F752E2E2E2049206B6E6F77207768617420796F75206172652E"),
                                 Line(Jaffar, "446F206E6F7420696E746572666572652E205468697320686173206E6F7468696E6720746F20646F207769746820796F752E"),
                                 Pause,
-                            ])),
-                        ]),
+                            ],
+                            on_decline: [
+                                Pause,
+                                Line(Jaffar, "4E6F2E"),
+                                Line(Jaffar, "4920776F6E2774206C657420796F75206B6E6F772E"),
+                                Line(Jaffar, "496620492063616E27742C207468656E20796F752063616E2774206569746865722E"),
+                                Line(Jaffar, "492077696C6C2072657475726E20746F206D7920686F6D652E"),
+                                Line(Jaffar, "596F752E2E2E2049206B6E6F77207768617420796F75206172652E"),
+                                Line(Jaffar, "446F206E6F7420696E746572666572652E205468697320686173206E6F7468696E6720746F20646F207769746820796F752E"),
+                                Pause,
+                            ],
+                        )),
                     ])),
                     Branch(keys: [], target: Steps([])),
                 ]),

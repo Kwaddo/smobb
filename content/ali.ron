@@ -24,8 +24,10 @@ ContentPart(
                     Line(Ali, "They fucking need me now! Why should I avoid them?!"),
                     Line(Ali, "Jaffar's after me? What do you"),
                     Line(System, "--__.----.___-...--"),
-                    Prompt([
-                        Branch(keys: ["<---------->"], target: Steps([
+                    Gate(GateSpec(
+                        code: "<---------->",
+                        signpost: "S.M.O.B.B.: BREACH DETECTED — deploy prevention? (yes / no)",
+                        on_deploy: [
                             Effect(Glitch(900)),
                             Effect(Flash(Cyan)),
                             Line(Ali, "My ears! Another breach?! Now?!"),
@@ -34,12 +36,16 @@ ContentPart(
                             Line(Ali, "Got a little prepared myself."),
                             Line(Ali, "I think Jaffar made a mistake by breaching me. Were they even meant to?"),
                             Line(Ali, "Thank you, Mavis. If that's even you."),
-                        ])),
-                        Branch(keys: [], target: Steps([
+                        ],
+                        on_missing: [
                             Line(Jaffar, "4E4F2120484F572044494420594F55204B4E4F573F21"),
                             Line(Jaffar, "594F55205255494E454420495421"),
-                        ])),
-                    ]),
+                        ],
+                        on_decline: [
+                            Line(Jaffar, "4E4F2120484F572044494420594F55204B4E4F573F21"),
+                            Line(Jaffar, "594F55205255494E454420495421"),
+                        ],
+                    )),
                 ])),
                 Branch(keys: ["k1ll"], target: Steps([
                     Line(Ali, "Hello. Do I know you? Probably, but also probably not."),
@@ -264,8 +270,10 @@ ContentPart(
                     Line(Ali, "I'm closing the call."),
                     Line(Ali, "Goodbye"),
                     Line(System, ".._--._--._"),
-                    Prompt([
-                        Branch(keys: ["<---------->"], target: Steps([
+                    Gate(GateSpec(
+                        code: "<---------->",
+                        signpost: "S.M.O.B.B.: BREACH DETECTED — deploy prevention? (yes / no)",
+                        on_deploy: [
                             Line(Ali, "Fuck, my ears! What just happened?"),
                             Line(Ali, "That's a breach? Hasan, what the hell?!"),
                             Line(Ali, "Alright, alright. Now I see what you mean."),
@@ -274,16 +282,24 @@ ContentPart(
                             Line(Ali, "We're all fucking done man, please just tell me the password."),
                             Line(Ali, "Wait what? '7549009' is the password?! You're fucking kidding me!"),
                             Line(Ali, "I'm gonna kill Bader dude, motherfucker uses my house address as a password."),
-                        ])),
-                        Branch(keys: [], target: Steps([
+                        ],
+                        on_missing: [
                             Pause,
                             Line(Jaffar, "596F7520646F6E27742077616E7420746F20626520686572652E"),
                             Line(Jaffar, "54686973206973206E6F7420736F6D657468696E6720616E792073616E6520706572736F6E20776F756C642077616E7420746F20696E766F6C7665207468656D73656C76657320696E2E"),
                             Line(Jaffar, "42757420796F7520617265206E6F742073616E652E"),
                             Line(Jaffar, "4E6569746865722061726520796F75206120706572736F6E2E20576520626F7468206B6E6F772E"),
                             Pause,
-                        ])),
-                    ]),
+                        ],
+                        on_decline: [
+                            Pause,
+                            Line(Jaffar, "596F7520646F6E27742077616E7420746F20626520686572652E"),
+                            Line(Jaffar, "54686973206973206E6F7420736F6D657468696E6720616E792073616E6520706572736F6E20776F756C642077616E7420746F20696E766F6C7665207468656D73656C76657320696E2E"),
+                            Line(Jaffar, "42757420796F7520617265206E6F742073616E652E"),
+                            Line(Jaffar, "4E6569746865722061726520796F75206120706572736F6E2E20576520626F7468206B6E6F772E"),
+                            Pause,
+                        ],
+                    )),
                 ])),
                 Branch(keys: ["plan"], target: Steps([
                     Line(Ali, "I know. Hasan told me everything already."),
