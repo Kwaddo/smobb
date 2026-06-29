@@ -18,16 +18,16 @@ jobs:
         include:
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
-            name: smobb-tui-linux-x86_64
+            name: smobb-desktop-linux-x86_64
           - os: macos-latest
             target: aarch64-apple-darwin
-            name: smobb-tui-macos-arm64
+            name: smobb-desktop-macos-arm64
           - os: macos-13
             target: x86_64-apple-darwin
-            name: smobb-tui-macos-x86_64
+            name: smobb-desktop-macos-x86_64
           - os: windows-latest
             target: x86_64-pc-windows-msvc
-            name: smobb-tui-windows-x86_64
+            name: smobb-desktop-windows-x86_64
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -35,28 +35,56 @@ jobs:
           targets: ${{ matrix.target }}
       - uses: Swatinem/rust-cache@v2
 
-      - name: Build
-        run: cargo build --release -p smobb-tui --target ${{ matrix.target }}
+      # winit + wgpu pull in X11/Wayland/xkbcommon at build time.
+      - name: Install Linux deps
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libxkbcommon-dev libwayland-dev
 
-      - name: Package (unix)
-        if: runner.os != 'Windows'
+      - name: Build (Linux / Windows)
+        if: runner.os != 'macOS'
+        run: cargo build --release -p smobb-desktop --target ${{ matrix.target }}
+
+      # On macOS the runner's native arch matches the matrix target, so cargo
+      # bundle builds the right slice without --target. It must run from the
+      # crate dir to pick up the bundle metadata + icon.
+      - name: Bundle .app (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          cargo install cargo-bundle --locked
+          cd crates/smobb-desktop
+          cargo bundle --release
+
+      - name: Package (Linux)
+        if: runner.os == 'Linux'
         env:
           NAME: ${{ matrix.name }}
           TARGET: ${{ matrix.target }}
         run: |
           mkdir -p pkg
-          cp "target/$TARGET/release/smobb-tui" pkg/
+          cp "target/$TARGET/release/smobb-desktop" pkg/
           cp README.md pkg/
           tar -C pkg -czf "$NAME.tar.gz" .
 
-      - name: Package (windows)
+      - name: Package (macOS)
+        if: runner.os == 'macOS'
+        env:
+          NAME: ${{ matrix.name }}
+        run: |
+          # Bundle name is "S.M.O.B.B." -> "S.M.O.B.B..app". ditto preserves the
+          # bundle structure inside the zip.
+          ditto -c -k --keepParent \
+            "target/release/bundle/osx/S.M.O.B.B..app" "$NAME.zip"
+
+      - name: Package (Windows)
         if: runner.os == 'Windows'
         env:
           NAME: ${{ matrix.name }}
           TARGET: ${{ matrix.target }}
         run: |
           New-Item -ItemType Directory -Force -Path pkg | Out-Null
-          Copy-Item "target/$env:TARGET/release/smobb-tui.exe" pkg/
+          Copy-Item "target/$env:TARGET/release/smobb-desktop.exe" pkg/
           Copy-Item README.md pkg/
           Compress-Archive -Path pkg/* -DestinationPath "$env:NAME.zip"
 
