@@ -1,0 +1,19 @@
+[package]
+name = "smobb-desktop"
+version = "2.0.1"
+edition = "2021"
+rust-version = "1.75"
+
+[dependencies]
+smobb-core = { path = "../smobb-core" }
+smobb-tui-core = { path = "../smobb-tui-core" }
+ratatui-wgpu = "0.4"
+winit = "0.30"
+pollster = "0.4"
+dejavu = "2.37"
+dirs = "5"
+web-time = "1"
+
+[package.metadata.bundle]
+name = "S.M.O.B.B."
+identifier = "com.smobb.desktop"

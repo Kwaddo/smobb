@@ -1,4 +1,4 @@
 [workspace]
-members = ["crates/smobb-core", "crates/smobb-tui-core", "crates/smobb-tui", "crates/smobb-web"]
+members = ["crates/smobb-core", "crates/smobb-tui-core", "crates/smobb-tui", "crates/smobb-web", "crates/smobb-desktop"]
 default-members = ["crates/smobb-core", "crates/smobb-tui-core", "crates/smobb-tui"]
 resolver = "2"
