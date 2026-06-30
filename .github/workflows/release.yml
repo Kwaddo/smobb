@@ -88,9 +88,16 @@ jobs:
           Copy-Item README.md pkg/
           Compress-Archive -Path pkg/* -DestinationPath "$env:NAME.zip"
 
-      - name: Upload to GitHub Release
+      # Code stays in the private repo; built artifacts go to the PUBLIC
+      # Kwaddo/smobb-releases repo so anyone can download them. Cross-repo
+      # upload needs a PAT with Contents:write on the target repo (the default
+      # GITHUB_TOKEN is scoped to this repo only), stored as RELEASES_TOKEN.
+      - name: Upload to public release repo
         uses: softprops/action-gh-release@v2
         with:
+          repository: Kwaddo/smobb-releases
+          token: ${{ secrets.RELEASES_TOKEN }}
+          tag_name: ${{ github.ref_name }}
           fail_on_unmatched_files: false
           files: |
             ${{ matrix.name }}.tar.gz
