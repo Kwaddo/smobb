@@ -102,3 +102,33 @@ jobs:
           files: |
             ${{ matrix.name }}.tar.gz
             ${{ matrix.name }}.zip
+
+  # Refresh the landing README (and logo) on the public releases repo so its
+  # homepage stays presentable and points at the just-cut release. Runs once,
+  # after the per-OS builds, and pushes only when the content actually changed.
+  readme:
+    name: Sync releases README
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Push landing page to smobb-releases
+        env:
+          GH_TOKEN: ${{ secrets.RELEASES_TOKEN }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          git clone --depth 1 \
+            "https://x-access-token:${GH_TOKEN}@github.com/Kwaddo/smobb-releases.git" out
+          cp docs/release-page/README.md out/README.md
+          cp crates/smobb-web/icon.svg out/icon.svg
+          cd out
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add README.md icon.svg
+          if git diff --cached --quiet; then
+            echo "Landing page unchanged, nothing to push."
+          else
+            git commit -m "docs: sync landing page (${TAG})"
+            git push
+          fi

@@ -129,7 +129,7 @@ pub fn story_lines(transcript: &[crate::app::Span], glitch: bool) -> Vec<Line<'s
                     .fg(RColor::Rgb(120, 120, 120))
                     .add_modifier(Modifier::DIM | Modifier::BOLD),
             )));
-        } else if s.speaker == prev && s.speaker.map_or(false, |sp| sp.spaced_turns()) {
+        } else if s.speaker == prev && s.speaker.is_some_and(|sp| sp.spaced_turns()) {
             // Same speaker continuing a turn. Caps-heavy voices (SMOBB) get a
             // blank spacer between each line so the turn reads as separate
             // sentences rather than one wall of capitals.
