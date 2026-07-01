@@ -72,6 +72,23 @@ fn extract_quoted(s: &str) -> Vec<String> {
     out
 }
 
+/// Does a typed command look like a secret code worth remembering as a
+/// "discovered password", versus an ordinary content command?
+///
+/// A branch key that carries no menu label (see `branch_label`) is only a
+/// *secret* if it reads like a code. In this content, real codes are either
+/// symbolic / leetspeak (`k1ll`, `!save`, `<---------->`, `end7312`) or long
+/// numeric passwords (`7549009`). Plain dialogue commands are all letters
+/// (`game`, `hack`, `breach`); menu selectors are 1-2 digit numbers (a story
+/// number). So: require at least one non-letter, and reject short all-digit
+/// tokens so menu numbers never surface as passwords while long numeric codes
+/// still do.
+fn is_secret_code(token: &str) -> bool {
+    let has_non_letter = token.chars().any(|c| !c.is_ascii_alphabetic());
+    let all_digits = !token.is_empty() && token.chars().all(|c| c.is_ascii_digit());
+    has_non_letter && !(all_digits && token.len() < 3)
+}
+
 struct Frame {
     steps: Vec<Step>,
     idx: usize,
@@ -160,7 +177,13 @@ impl Engine {
     /// Load a saved snapshot into this engine (call before `start`).
     pub fn restore(&mut self, s: crate::save::SaveState) {
         self.recap = crate::recap::Recap::load(&crate::recap::MemoryStorage { lines: s.recap });
-        self.discovered = s.discovered.into_iter().collect();
+        // Drop any non-code entries an older build wrongly recorded as passwords
+        // (e.g. plain commands like "game"), so a stale save self-heals on load.
+        self.discovered = s
+            .discovered
+            .into_iter()
+            .filter(|d| is_secret_code(d))
+            .collect();
         self.asked = s
             .asked
             .into_iter()
@@ -501,7 +524,8 @@ impl Engine {
             if b.keys.iter().any(|k| crate::vocab::key_matches(k, input)) {
                 let recorded = crate::vocab::canonical(input).unwrap_or(input).to_string();
                 let is_meta = NONRECORD.contains(&input);
-                if !is_meta && self.branch_label(&loc_id, b).is_none() {
+                if !is_meta && self.branch_label(&loc_id, b).is_none() && is_secret_code(&recorded)
+                {
                     self.discovered.insert(recorded.clone());
                 }
                 let is_nav = matches!(&b.target, crate::scene::Target::Steps(steps)
@@ -1478,6 +1502,63 @@ mod tests {
         assert!(joined.contains("[Decoded]"));
         assert!(joined.contains("7549009")); // password discovered + clue text
         assert!(joined.contains("Hello")); // decoded jaffar line
+    }
+
+    #[test]
+    fn plain_content_commands_and_menu_numbers_are_not_passwords() {
+        use crate::content;
+        // A dialogue command ("game") and a story-menu number ("1") are unlabeled
+        // and non-meta, but must NOT be recorded as discovered passwords. A real
+        // code ("k1ll") on an identical branch shape still is.
+        let c = content::from_str(&[r#"ContentPart(
+            locations: { "hub": ( commands: [
+                Branch(keys:["game"], target: Steps([ Line(System, "ha") ])),
+                Branch(keys:["1"], target: Steps([ Line(System, "story") ])),
+                Branch(keys:["k1ll"], target: Steps([ Line(System, "secret") ])),
+            ] ) },
+            scenes: {},
+        )"#]);
+        let mut e = Engine::new(c);
+        e.set_skip(true);
+        let _ = e.start();
+        let _ = e.advance("game");
+        let _ = e.advance("1");
+        let _ = e.advance("k1ll");
+        assert!(!e.discovered().contains("game"), "'game' is not a password");
+        assert!(
+            !e.discovered().contains("1"),
+            "menu number is not a password"
+        );
+        assert!(e.discovered().contains("k1ll"), "'k1ll' is a secret code");
+    }
+
+    #[test]
+    fn restore_drops_stale_non_code_passwords() {
+        use crate::content;
+        // A save written by an older build may hold junk ("game") in discovered;
+        // restoring it must keep real codes and drop the junk.
+        let mut e = Engine::new(content::load());
+        let save = crate::save::SaveState {
+            discovered: vec!["game".into(), "7549009".into(), "k1ll".into()],
+            ..Default::default()
+        };
+        e.restore(save);
+        assert!(!e.discovered().contains("game"));
+        assert!(e.discovered().contains("7549009"));
+        assert!(e.discovered().contains("k1ll"));
+    }
+
+    #[test]
+    fn is_secret_code_classifies_codes_and_words() {
+        assert!(is_secret_code("7549009")); // long numeric password
+        assert!(is_secret_code("k1ll")); // leetspeak
+        assert!(is_secret_code("!save")); // symbolic
+        assert!(is_secret_code("<---------->")); // symbolic
+        assert!(is_secret_code("end7312")); // alnum mix
+        assert!(!is_secret_code("game")); // plain word
+        assert!(!is_secret_code("mapping")); // plain word
+        assert!(!is_secret_code("1")); // menu selector
+        assert!(!is_secret_code("12")); // menu selector
     }
 
     #[test]

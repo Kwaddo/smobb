@@ -254,6 +254,8 @@ pub fn render(f: &mut Frame, app: &App) {
         .style(Style::default().bg(bg));
     let total = story_base.line_count(story_inner_w) as u16;
     let max_scroll = total.saturating_sub(story_inner_h);
+    // Report the bottom offset so a scroll that breaks auto-follow starts here.
+    app.note_story_max_scroll(max_scroll);
     let y = if app.user_scrolled() {
         app.scroll().min(max_scroll)
     } else {

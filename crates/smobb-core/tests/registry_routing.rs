@@ -11,7 +11,9 @@ fn texts(out: &[Output]) -> Vec<String> {
 }
 
 /// The reported bug: at the hub, the section labelled "Stories" must be
-/// enterable by typing the displayed word, not only the internal id.
+/// enterable by typing the displayed word, not only the internal id — and it
+/// must land straight on the numbered story list, with no extra "search for?"
+/// layer in between.
 #[test]
 fn stories_label_is_enterable_from_hub() {
     let mut e = Engine::new(content::load());
@@ -25,10 +27,21 @@ fn stories_label_is_enterable_from_hub() {
         !t.iter().any(|s| s.contains("I don't understand")),
         "typing 'stories' triggered unknown-command feedback — canonical routing is broken"
     );
+    // Entering the section shows the numbered story prompt directly.
     assert!(
-        t.iter()
-            .any(|s| s.contains("WHAT WOULD YOU LIKE TO SEARCH FOR?")),
-        "typing 'stories' did not reach the Stories/extra location (expected its prompt)"
+        t.iter().any(|s| s.contains("THERE ARE 12 STORIES")),
+        "entering Stories did not present the numbered list directly (extra layer still there?)"
+    );
+    // ...and a number plays that story immediately — no intermediate keyword.
+    let out = e.advance("1");
+    let t = texts(&out);
+    assert!(
+        !t.iter().any(|s| s.contains("I don't understand")),
+        "typing a story number right after entering did not select a story"
+    );
+    assert!(
+        t.iter().any(|s| s.contains("THERE WERE TWO MEN")),
+        "story 1 did not play when its number was typed directly"
     );
 }
 

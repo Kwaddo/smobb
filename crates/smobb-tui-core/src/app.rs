@@ -72,6 +72,10 @@ pub struct App {
     sidebar_visible: bool,
     scroll: u16,
     user_scrolled: bool,
+    /// Last story-pane bottom offset (content height minus viewport) reported by
+    /// `ui::render`. Lets a scroll that breaks auto-follow start from what's on
+    /// screen instead of a stale offset. Interior-mutable: render holds `&App`.
+    story_max_scroll: std::cell::Cell<u16>,
     scroll_focus: Focus,
     sidebar_scroll: u16,
     sidebar_user_scrolled: bool,
@@ -102,6 +106,7 @@ impl App {
             sidebar_visible: true,
             scroll: 0,
             user_scrolled: false,
+            story_max_scroll: std::cell::Cell::new(0),
             scroll_focus: Focus::Story,
             sidebar_scroll: 0,
             sidebar_user_scrolled: false,
@@ -431,7 +436,7 @@ impl App {
             }
             Key::Up => match self.scroll_focus {
                 Focus::Story => {
-                    self.user_scrolled = true;
+                    self.take_manual_story_scroll();
                     self.scroll = self.scroll.saturating_sub(1);
                 }
                 Focus::Sidebar => {
@@ -448,7 +453,7 @@ impl App {
             },
             Key::PageUp => match self.scroll_focus {
                 Focus::Story => {
-                    self.user_scrolled = true;
+                    self.take_manual_story_scroll();
                     self.scroll = self.scroll.saturating_sub(5);
                 }
                 Focus::Sidebar => {
@@ -483,13 +488,30 @@ impl App {
         self.scroll_focus = pane;
         match pane {
             Focus::Story => {
-                self.user_scrolled = true;
+                self.take_manual_story_scroll();
                 self.scroll = apply_delta(self.scroll, lines);
             }
             Focus::Sidebar => {
                 self.sidebar_user_scrolled = true;
                 self.sidebar_scroll = apply_delta(self.sidebar_scroll, lines);
             }
+        }
+    }
+
+    /// Record the story pane's bottom scroll offset, computed each frame by
+    /// `ui::render`. See [`Self::take_manual_story_scroll`].
+    pub fn note_story_max_scroll(&self, max: u16) {
+        self.story_max_scroll.set(max);
+    }
+
+    /// Begin (or continue) a manual story scroll. When the view was still
+    /// auto-following the bottom, seed the offset from the last-rendered bottom
+    /// so the first step moves relative to what's on screen — not from a stale
+    /// (usually 0) offset that would snap the view to the very top.
+    fn take_manual_story_scroll(&mut self) {
+        if !self.user_scrolled {
+            self.scroll = self.story_max_scroll.get();
+            self.user_scrolled = true;
         }
     }
 
@@ -790,6 +812,30 @@ mod tests {
         app.key(Key::Esc);
         app.tick(web_time::Instant::now());
         assert!(!app.quit());
+    }
+
+    #[test]
+    fn scroll_up_from_autofollow_starts_at_visible_bottom() {
+        // Regression: while auto-following the bottom, the first manual scroll-up
+        // must step up from what's on screen — not snap to line 0 of the whole
+        // transcript (which reads as "scrolling is broken").
+        let mut app = app_fixture();
+        app.tick(web_time::Instant::now()); // reveal + await, still auto-following
+        assert!(!app.user_scrolled());
+        app.note_story_max_scroll(30); // render says the bottom offset is 30
+        app.key(Key::Up);
+        assert!(app.user_scrolled());
+        assert_eq!(
+            app.scroll(),
+            29,
+            "scroll-up jumped away from the visible bottom"
+        );
+        // A wheel gesture (desktop path) seeds from the bottom too.
+        let mut app2 = app_fixture();
+        app2.tick(web_time::Instant::now());
+        app2.note_story_max_scroll(30);
+        app2.scroll_pane(Focus::Story, -3);
+        assert_eq!(app2.scroll(), 27);
     }
 
     #[test]

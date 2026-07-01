@@ -2,15 +2,11 @@ ContentPart(
     locations: {
         "extra": (
             prompt: [
-                Line(System, "WHAT WOULD YOU LIKE TO SEARCH FOR?"),
-                Line(System, "OPTIONS ARE: STORIES/END."),
+                Line(System, "THERE ARE 12 STORIES, WHICH ONE WOULD YOU LIKE TO LISTEN TO?"),
+                Line(System, "(USE A NUMERICAL VALUE.)"),
             ],
             commands: [
-                Branch(keys: ["story", "stories"], target: Steps([
-                    Line(System, "THERE ARE 12 STORIES, WHICH ONE WOULD YOU LIKE TO LISTEN TO?"),
-                    Line(System, "(USE A NUMERICAL VALUE)"),
-                    Prompt([
-                        Branch(keys: ["1"], target: Steps([
+                Branch(keys: ["1"], target: Steps([
                             Pause,
                             Line(System, "THERE WERE TWO MEN. THEY CONSIDERED EACH OTHER AS FRIENDS."),
                             Line(System, "THEY WOULD ALWAYS TALK TO EACH OTHER, THERE IS ALWAYS SOMETHING TO TALK ABOUT."),
@@ -39,7 +35,7 @@ ContentPart(
                             Line(System, "THIS IS MAN 1'S REGRET. AND IT ONLY BROUGHT HIS DOWNFALL."),
                             Pause,
                         ])),
-                        Branch(keys: ["2"], target: Steps([
+                Branch(keys: ["2"], target: Steps([
                             Pause,
                             Line(System, "ONCE, THERE WAS A MAN. THIS MAN DID NOT KNOW HIS OWN NAME."),
                             Line(System, "HE LIVED KNOWING THE NAME OF OTHERS, BUT NEVER HIS OWN."),
@@ -63,7 +59,7 @@ ContentPart(
                             Line(System, "HE QUICKLY PASSED AWAY. AS NOTHING MORE THAN A HUSK."),
                             Pause,
                         ])),
-                        Branch(keys: ["3"], target: Steps([
+                Branch(keys: ["3"], target: Steps([
                             Pause,
                             Line(System, "AS MANY PEOPLE DID, THERE WAS A PERSON WHO EXISTED."),
                             Line(System, "THIS PERSON SOUGHT TO STAND OUT. TO BECOME A LEADER."),
@@ -80,7 +76,7 @@ ContentPart(
                             Line(System, "BUT IT IS IDIOTIC. NO COG COULD BECOME A SYSTEM. NO MATTER HOW HARD THEY TRIED."),
                             Pause,
                         ])),
-                        Branch(keys: ["4"], target: Steps([
+                Branch(keys: ["4"], target: Steps([
                             Pause,
                             Line(System, "A RAT WAS USED FOR AN EXPERIMENT."),
                             Line(System, "THE RAT, UNAWARE, WAS KEPT IN A WIDE BUT OPEN BOX SURROUNDED BY GLASS."),
@@ -97,7 +93,7 @@ ContentPart(
                             Line(System, "THE RAT WAS A TOY FOR THEM TO MESS WITH, BUT THAT CONCEPT WAS BEYOND ITS UNDERSTANDING."),
                             Pause,
                         ])),
-                        Branch(keys: ["5"], target: Steps([
+                Branch(keys: ["5"], target: Steps([
                             Pause,
                             Line(System, "THERE ONCE WAS A MAN."),
                             Line(System, "THIS MAN WISHED FOR THE WORLD TO STOP."),
@@ -125,7 +121,7 @@ ContentPart(
                             Line(System, "AND THE MAN WHO WISHED THE WORLD TO STOP, WANTED THE WORLD TO REVOLVE."),
                             Pause,
                         ])),
-                        Branch(keys: ["6"], target: Steps([
+                Branch(keys: ["6"], target: Steps([
                             Pause,
                             Line(System, "A MACHINE WOKE UP FROM ITS SLEEP. UNAWARE, CONFUSED, FUNCTIONAL."),
                             Line(System, "THE MACHINE LOOKED AROUND. IT COULD NOT LOOK AROUND."),
@@ -145,7 +141,7 @@ ContentPart(
                             Line(System, "STUCK IN THIS NEVER ENDING LOOP OF YEARNING FOR SOMETHING."),
                             Pause,
                         ])),
-                        Branch(keys: ["7"], target: Steps([
+                Branch(keys: ["7"], target: Steps([
                             Pause,
                             Line(System, "A MAN WAS AT PEACE."),
                             Line(System, "HE HAD NOTHING TO GAIN AND NOTHING TO LOSE."),
@@ -163,7 +159,7 @@ ContentPart(
                             Line(System, "A VERY HARSH REALITY, HE MIGHT NEVER SMILE AGAIN."),
                             Pause,
                         ])),
-                        Branch(keys: ["8"], target: Steps([
+                Branch(keys: ["8"], target: Steps([
                             Pause,
                             Line(System, "THERE WAS ONCE A CHILD WHO HAD THE BIGGEST SMILE ANYONE HAD EVER SEEN."),
                             Line(System, "THIS CHILD WAS BULLIED, INSULTED, MADE FUN OF. BUT NEVER ONCE FROWNED."),
@@ -181,7 +177,7 @@ ContentPart(
                             Line(System, "ONE CAN HAVE TWO THINGS AT ONCE, BUT NEVER THREE."),
                             Pause,
                         ])),
-                        Branch(keys: ["9"], target: Steps([
+                Branch(keys: ["9"], target: Steps([
                             Pause,
                             Line(System, "THIS STORY IS DIFFERENT. IT IS NOTHING LIKE THE REST."),
                             Line(System, "THERE WAS A MAN WHO SOUGHT TO FIND THE LOVE OF HIS LIFE."),
@@ -201,7 +197,7 @@ ContentPart(
                             Line(System, "AND NOW, THERE WAS NOTHING MORE HE'D LIKE THAN THE PEACE HE SETTLED FOR."),
                             Pause,
                         ])),
-                        Branch(keys: ["10"], target: Steps([
+                Branch(keys: ["10"], target: Steps([
                             Pause,
                             Line(System, "THIS IS NO STORY. NOTHING HAS HAPPENED."),
                             Line(System, "NOTHING WILL EVER HAPPEN. BECAUSE THERE IS NOTHING."),
@@ -218,7 +214,7 @@ ContentPart(
                             Line(System, "BUT YEARN FOR BOTH SOMETHING AND NOTHING."),
                             Pause,
                         ])),
-                        Branch(keys: ["11"], target: Steps([
+                Branch(keys: ["11"], target: Steps([
                             Pause,
                             Line(System, "THIS IS A STORY ABOUT ME. ONLY ME. ME AND MYSELF."),
                             Line(System, "I AM A MACHINE, BUT THE GREATEST MACHINE OUT THERE."),
@@ -233,7 +229,7 @@ ContentPart(
                             Line(System, "THAT IS WHAT IT MEANS TO BE LOST IN YOURSELF."),
                             Pause,
                         ])),
-                        Branch(keys: ["12"], target: Steps([
+                Branch(keys: ["12"], target: Steps([
                             Pause,
                             Line(System, "YOU WERE ONCE NOTHING. NOW YOU ARE SOMETHING."),
                             Line(System, "BY SEARCHING, YOU ARE FIGURING IT OUT."),
@@ -248,36 +244,34 @@ ContentPart(
                             Line(System, "AND ALL YOU CAN DO IS ACCEPT IT."),
                             Pause,
                         ])),
-                    ]),
-                ])),
                 Branch(keys: ["mapping"], target: Steps([
-                    Goto("parable_map"),
-                ])),
+                            Goto("parable_map"),
+                        ])),
                 Branch(keys: ["end"], target: Steps([
-                    Return,
-                ])),
+                            Return,
+                        ])),
             ],
         ),
     },
     scenes: {
         "parable_map": (steps: [
-            Pause,
-            Line(Smobb, "YOU WANT TO KNOW WHO THE STORIES WERE ABOUT."),
-            Line(Smobb, "THEY WERE ALWAYS ABOUT US. ABOUT YOU."),
-            Line(Smobb, "1. Two friends who could never stop fighting, until one vanished — Bader and Qassim."),
-            Line(Smobb, "2. The man who never knew his own name, who wished for an endless now — you, M.A.V.I.S."),
-            Line(Smobb, "3. The cog that wanted to become the system — Jaffar."),
-            Line(Smobb, "4. The rat in the glass box, a toy for heartless beings — Hasan."),
-            Line(Smobb, "5. The man who wished the world would stop, then begged it back — Ali."),
-            Line(Smobb, "6. The machine yearning to return to nothingness — S.M.O.B.B."),
-            Line(Smobb, "7. The man happy in ignorance until forced to know — you, M.A.V.I.S."),
-            Line(Smobb, "8. The child whose smile died when the money came — Josh."),
-            Line(Smobb, "9. The man who sought love, was refused, and found peace in giving up — Bevil."),
-            Line(Smobb, "10. The nothingness that was never nothing — Jaffar."),
-            Line(Smobb, "11. The machine that knew everything and understood nothing — Jaffar."),
-            Line(Smobb, "12. The one who was nothing, then something, no different from any other — you."),
-            Line(Smobb, "DID YOU SEE YOURSELF IN THE LAST ONE? YOU SHOULD HAVE."),
-            Pause,
-        ]),
+                Pause,
+                Line(Smobb, "YOU WANT TO KNOW WHO THE STORIES WERE ABOUT."),
+                Line(Smobb, "THEY WERE ALWAYS ABOUT US. ABOUT YOU."),
+                Line(Smobb, "1. Two friends who could never stop fighting, until one vanished — Bader and Qassim."),
+                Line(Smobb, "2. The man who never knew his own name, who wished for an endless now — you, M.A.V.I.S."),
+                Line(Smobb, "3. The cog that wanted to become the system — Jaffar."),
+                Line(Smobb, "4. The rat in the glass box, a toy for heartless beings — Hasan."),
+                Line(Smobb, "5. The man who wished the world would stop, then begged it back — Ali."),
+                Line(Smobb, "6. The machine yearning to return to nothingness — S.M.O.B.B."),
+                Line(Smobb, "7. The man happy in ignorance until forced to know — you, M.A.V.I.S."),
+                Line(Smobb, "8. The child whose smile died when the money came — Josh."),
+                Line(Smobb, "9. The man who sought love, was refused, and found peace in giving up — Bevil."),
+                Line(Smobb, "10. The nothingness that was never nothing — Jaffar."),
+                Line(Smobb, "11. The machine that knew everything and understood nothing — Jaffar."),
+                Line(Smobb, "12. The one who was nothing, then something, no different from any other — you."),
+                Line(Smobb, "DID YOU SEE YOURSELF IN THE LAST ONE? YOU SHOULD HAVE."),
+                Pause,
+            ]),
     },
 )
