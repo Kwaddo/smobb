@@ -16,9 +16,6 @@
 :root {
   --bg: #0b0b0b;
   --fg: #d0d0d0;
-  --bar-border: #333;
-  --btn: #222;
-  --btn-active: #3a3a3a;
   --bar-h: 52px; /* control-bar height incl. padding; grid reserves this on touch */
 }
 
