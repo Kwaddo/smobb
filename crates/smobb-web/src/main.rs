@@ -43,6 +43,8 @@ fn to_key(k: &KeyEvent) -> Option<Key> {
         KeyCode::F(3) => Key::F3,
         KeyCode::Up => Key::Up,
         KeyCode::Down => Key::Down,
+        KeyCode::Left => Key::Left,
+        KeyCode::Right => Key::Right,
         KeyCode::PageUp => Key::PageUp,
         KeyCode::PageDown => Key::PageDown,
         KeyCode::Esc => Key::Esc,
