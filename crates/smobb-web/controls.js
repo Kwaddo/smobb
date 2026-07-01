@@ -2,6 +2,13 @@
 // that ratzilla listens for on `document`. No wasm<->JS calls — we only
 // synthesize keyboard events the running ratatui app already understands.
 
+// Mirror ratzilla's is_mobile() (UA-based) so CSS can switch the cell
+// height to match the mobile get_screen_size() /19 divisor. A narrow
+// desktop window is NOT mobile and must keep the 20px cell (Task 1/3).
+if (/mobile|tablet/i.test(navigator.userAgent)) {
+  document.documentElement.classList.add("is-mobile");
+}
+
 function dispatchKey(key) {
   document.dispatchEvent(
     new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true })
@@ -68,6 +75,57 @@ if (kbd) {
     { passive: true }
   );
 }
+
+// --- wheel / trackpad scrolling -----------------------------------------
+// Bridge scroll gestures to the arrow/page keys the app already handles.
+// Scrolls whichever pane has focus (story vs sidebar, chosen via <-/-> or Tab).
+let wheelAccum = 0;
+document.addEventListener(
+  "wheel",
+  (e) => {
+    e.preventDefault(); // stop the page itself from scrolling
+    wheelAccum += e.deltaY;
+    const STEP = 24; // px per line of scroll
+    if (Math.abs(e.deltaY) >= 240) {
+      dispatchKey(e.deltaY > 0 ? "PageDown" : "PageUp");
+      wheelAccum = 0;
+      return;
+    }
+    while (Math.abs(wheelAccum) >= STEP) {
+      dispatchKey(wheelAccum > 0 ? "ArrowDown" : "ArrowUp");
+      wheelAccum -= Math.sign(wheelAccum) * STEP;
+    }
+  },
+  { passive: false }
+);
+
+// --- touch-swipe scrolling ----------------------------------------------
+let swipeY = null;
+document.addEventListener(
+  "pointerdown",
+  (e) => {
+    if (e.pointerType === "touch" && !e.target.closest("#controls")) {
+      swipeY = e.clientY;
+    }
+  },
+  { passive: true }
+);
+document.addEventListener(
+  "pointermove",
+  (e) => {
+    if (swipeY === null || e.pointerType !== "touch") return;
+    const SWIPE = 24; // px per scroll line
+    let dy = swipeY - e.clientY; // finger up => scroll down
+    while (Math.abs(dy) >= SWIPE) {
+      dispatchKey(dy > 0 ? "ArrowDown" : "ArrowUp");
+      dy -= Math.sign(dy) * SWIPE;
+      swipeY -= Math.sign(swipeY - e.clientY) * SWIPE;
+    }
+  },
+  { passive: true }
+);
+document.addEventListener("pointerup", () => { swipeY = null; });
+document.addEventListener("pointercancel", () => { swipeY = null; });
 
 // --- responsive: start with the sidebar hidden on phones -----------------
 if (window.matchMedia("(max-width: 700px)").matches) {
