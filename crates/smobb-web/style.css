@@ -19,6 +19,7 @@
   --bar-border: #333;
   --btn: #222;
   --btn-active: #3a3a3a;
+  --bar-h: 52px; /* control-bar height incl. padding; grid reserves this on touch */
 }
 
 * { box-sizing: border-box; }
@@ -44,6 +45,38 @@ html, body {
   white-space: pre;
 }
 #grid pre { margin: 0; line-height: 20px; }
+
+/* On touch, ratzilla sizes the grid to the PHYSICAL screen (taller than the
+   visible viewport), so the input row would fall below the fold. Bottom-anchor
+   the grid above the reserved control bar so the prompt + newest lines stay
+   visible; the oversized top (old lines, top border) clips upward. */
+html.is-touch #grid {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: calc(var(--bar-h) + env(safe-area-inset-bottom, 0px));
+}
+
+/* title strip: only on touch, where the ratatui title clips off-top */
+#titlebar { display: none; }
+html.is-touch #titlebar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: calc(28px + env(safe-area-inset-top, 0px));
+  padding: env(safe-area-inset-top, 0px) 12px 0;
+  z-index: 9300; /* above grid, below effect overlays (9500+) */
+  background: linear-gradient(180deg, rgba(10, 12, 15, 0.96), rgba(10, 12, 15, 0));
+  font-size: 13px;
+  color: rgba(180, 200, 210, 0.75);
+  pointer-events: none;
+}
+#titlebar .dots { color: rgba(120, 140, 160, 0.55); letter-spacing: 2px; }
+#titlebar .name { letter-spacing: 3px; font-weight: 700; }
 
 /* hidden input that summons the mobile soft keyboard */
 #kbd {

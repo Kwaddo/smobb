@@ -29,6 +29,13 @@
   <body>
     <!-- ratzilla's DomBackend appends its #grid terminal into <body> on init -->
 
+    <!-- touch-only title strip: fills the top the ratatui title clips into
+         when the grid is bottom-anchored (see style.css). -->
+    <div id="titlebar" aria-hidden="true">
+      <span class="dots">&#9679;&#9679;&#9679;</span>
+      <span class="name">S.M.O.B.B.</span>
+    </div>
+
     <!-- decorative screen bezel (non-interactive) -->
     <div id="bezel" aria-hidden="true"></div>
 
@@ -55,8 +62,6 @@
       <button type="button" id="b-skip" title="Hold to fast-forward">Skip</button>
       <button type="button" data-key="F2" title="Instant text on/off">Inst</button>
       <button type="button" data-key="F3" title="Reduce effects">FX</button>
-      <button type="button" data-key="ArrowUp" title="Scroll up">&#8593;</button>
-      <button type="button" data-key="ArrowDown" title="Scroll down">&#8595;</button>
       <button type="button" data-key="Enter" title="Submit">&#9166;</button>
     </nav>
 
