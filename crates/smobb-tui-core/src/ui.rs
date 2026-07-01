@@ -187,6 +187,26 @@ pub fn banner_lines(text: &str, height: u16) -> Vec<Line<'static>> {
     lines
 }
 
+/// Bottom-row hint scaled to available width. `None` when too narrow to be
+/// useful (phones / narrow terminals), so the input row shows only the prompt.
+pub fn hint_for_width(width: u16, reduced_effects: bool) -> Option<String> {
+    let fx = if reduced_effects {
+        "[F3] effects:OFF"
+    } else {
+        "[F3] effects"
+    };
+    if width >= 90 {
+        Some(format!(
+            "[Tab] sidebar  [<-/-> focus]  [hold Space] fast  [F2] instant  {}  ['leave' exits]  [Esc] quit",
+            fx
+        ))
+    } else if width >= 55 {
+        Some("[Tab] sidebar  [hold Space] fast  [Esc] quit".to_string())
+    } else {
+        None
+    }
+}
+
 pub fn render(f: &mut Frame, app: &App) {
     let outer = Block::bordered().title(" S.M.O.B.B. ");
     let area = f.area();
@@ -272,28 +292,20 @@ pub fn render(f: &mut Frame, app: &App) {
         render_sidebar(f, app, sa);
     }
 
-    // input line
-    let fx_label = if app.reduced_effects() {
-        "[F3] effects:OFF"
-    } else {
-        "[F3] effects"
-    };
-    let hint = format!(
-        "[Tab] sidebar  [<-/-> focus]  [hold Space] fast  [F2] instant  {}  ['leave' exits]  [Esc] quit",
-        fx_label
-    );
-    let input = Paragraph::new(Line::from(vec![
-        RSpan::styled(
-            format!("> {}", app.input()),
-            Style::default().fg(RColor::Rgb(220, 220, 220)),
-        ),
-        RSpan::styled(
+    // input line + width-aware hint
+    let mut spans = vec![RSpan::styled(
+        format!("> {}", app.input()),
+        Style::default().fg(RColor::Rgb(220, 220, 220)),
+    )];
+    if let Some(hint) = hint_for_width(input_area.width, app.reduced_effects()) {
+        spans.push(RSpan::styled(
             format!("    {}", hint),
             Style::default()
                 .fg(RColor::Rgb(110, 110, 110))
                 .add_modifier(Modifier::DIM),
-        ),
-    ]));
+        ));
+    }
+    let input = Paragraph::new(Line::from(spans));
     f.render_widget(input, input_area);
 }
 
@@ -596,6 +608,32 @@ mod tests {
         let g = super::scramble(s, 3);
         assert_eq!(g.chars().count(), s.chars().count());
         assert_ne!(g, s);
+    }
+
+    #[test]
+    fn hint_full_at_wide_width() {
+        let h = super::hint_for_width(140, false).expect("wide has hint");
+        assert!(h.contains("[F2] instant"));
+        assert!(h.contains("[Esc] quit"));
+        assert!(h.contains("[F3] effects"));
+    }
+
+    #[test]
+    fn hint_reduced_flag_flips_f3_label() {
+        let h = super::hint_for_width(140, true).unwrap();
+        assert!(h.contains("[F3] effects:OFF"));
+    }
+
+    #[test]
+    fn hint_short_at_medium_width() {
+        let h = super::hint_for_width(80, false).expect("medium has hint");
+        assert!(!h.contains("[F2] instant"), "medium drops secondary keys");
+        assert!(h.contains("[Esc] quit"));
+    }
+
+    #[test]
+    fn hint_absent_at_narrow_width() {
+        assert!(super::hint_for_width(37, false).is_none());
     }
 
     #[test]
