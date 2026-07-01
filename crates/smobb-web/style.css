@@ -61,42 +61,40 @@ html, body {
 /* touch control bar */
 #controls {
   position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 52px;
+  left: 6px; right: 6px; bottom: 6px;   /* inside the bezel */
+  height: 44px;
   display: flex;
-  gap: 4px;
-  padding: 4px;
-  background: var(--bar);
-  border-top: 1px solid var(--bar-border);
-  /* keep clear of iOS home indicator */
-  padding-bottom: calc(4px + env(safe-area-inset-bottom, 0px));
+  gap: 6px;
+  padding: 5px;
+  background: rgba(18, 20, 24, 0.92);
+  border: 1px solid rgba(120, 140, 160, 0.18);
+  border-radius: 8px;
+  z-index: 9600;                         /* above bezel */
+  padding-bottom: calc(5px + env(safe-area-inset-bottom, 0px));
 }
 #controls button {
-  flex: 1 1 0;
-  min-width: 0;
+  flex: 1 1 0; min-width: 0;
   background: var(--btn);
   color: var(--fg);
   border: 1px solid var(--bar-border);
   border-radius: 6px;
-  font: inherit;
-  font-size: 16px;
-  cursor: pointer;
-  user-select: none;
-  -webkit-user-select: none;
+  font: inherit; font-size: 15px;
+  cursor: pointer; user-select: none; -webkit-user-select: none;
   touch-action: manipulation;
 }
 #controls button:active,
-#controls button.active {
-  background: var(--btn-active);
-}
+#controls button.active { background: var(--btn-active); }
 
-/* on a real keyboard (wide viewport) the control bar is optional clutter;
-   keep it but make it slimmer */
-@media (min-width: 800px) {
-  #controls { height: 40px; opacity: 0.85; }
-}
+/* desktop keyboards do not need the touch bar */
+@media (min-width: 800px) { #controls { display: none; } }
+
+/* CARRY-FORWARD from Task 1: ratzilla's mobile path (get_screen_size) uses
+   rows = screenHeight / 19, not / 20. Match it with a 19px cell — but ONLY
+   for real mobile/tablet, keyed on the same user-agent test ratzilla uses
+   (is_mobile() = UA contains "mobile"/"tablet"). A narrow DESKTOP window is
+   NOT mobile and still needs 20px, so this must NOT be a viewport-width
+   media query. The `.is-mobile` class is set in controls.js (Task 4). */
+html.is-mobile #grid, html.is-mobile #grid pre { line-height: 19px; }
 
 /* --- screen dressing: background + bezel -------------------------------- */
 
