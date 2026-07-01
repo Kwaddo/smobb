@@ -16,8 +16,11 @@ smobb-save.json
 
 # smobb-web dev verification (not shipped)
 crates/smobb-web/dev-shot.mjs
+crates/smobb-web/dev-gen-icons.mjs
 crates/smobb-web/.shots/
 crates/smobb-web/node_modules/
+crates/smobb-web/package.json
+crates/smobb-web/package-lock.json
 
 # macOS
 .DS_Store
