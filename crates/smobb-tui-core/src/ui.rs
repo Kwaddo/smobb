@@ -616,6 +616,10 @@ mod tests {
         assert!(h.contains("[F2] instant"));
         assert!(h.contains("[Esc] quit"));
         assert!(h.contains("[F3] effects"));
+        assert!(
+            !h.contains(":OFF"),
+            "non-reduced hint must not show effects:OFF"
+        );
     }
 
     #[test]
@@ -634,6 +638,34 @@ mod tests {
     #[test]
     fn hint_absent_at_narrow_width() {
         assert!(super::hint_for_width(37, false).is_none());
+    }
+
+    #[test]
+    fn hint_boundary_90_is_full() {
+        let h = super::hint_for_width(90, false).expect("90 is full tier");
+        assert!(h.contains("[F2] instant"), "90 must be the full hint");
+    }
+
+    #[test]
+    fn hint_boundary_89_is_short() {
+        let h = super::hint_for_width(89, false).expect("89 is short tier");
+        assert!(!h.contains("[F2] instant"), "89 must be the short hint");
+        assert!(h.contains("[Esc] quit"));
+    }
+
+    #[test]
+    fn hint_boundary_55_is_short() {
+        let h = super::hint_for_width(55, false).expect("55 is short tier");
+        assert!(!h.contains("[F2] instant"));
+        assert!(h.contains("[Esc] quit"));
+    }
+
+    #[test]
+    fn hint_boundary_54_is_none() {
+        assert!(
+            super::hint_for_width(54, false).is_none(),
+            "54 must have no hint"
+        );
     }
 
     #[test]
