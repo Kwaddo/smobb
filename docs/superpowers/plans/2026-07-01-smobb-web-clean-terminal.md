@@ -12,7 +12,7 @@
 
 - **Web-only.** Only edit files under `crates/smobb-web/`: `style.css`, `index.html`, `controls.js`, and new font assets. Do NOT modify `smobb-core`, `smobb-tui-core`, `smobb-tui`, or `smobb-desktop`.
 - **Colors unchanged.** Do not alter per-speaker text colors; those come from the shared render.
-- **Cell metric is fixed by ratzilla:** each character cell MUST render as **10px wide × 19px tall**. Ratzilla computes grid `cols = window.innerWidth / 10`, `rows = window.innerHeight / 19` (`ratzilla-0.2.0/src/utils.rs`). Glyph advance MUST be ≤ 10px (aim ~9.9px) so text never overflows/wraps; line box MUST be exactly 19px so the grid fills the viewport height.
+- **Cell metric is fixed by ratzilla:** each character cell MUST render as **10px wide × 20px tall on desktop**. Ratzilla's desktop path `get_window_size` computes `cols = innerWidth / 10`, `rows = innerHeight / 20` (`ratzilla-0.2.0/src/utils.rs`, verified). Glyph advance MUST be ≤ 10px (aim ~9.9px) so text never overflows/wraps; line box MUST be exactly **20px** so the grid fills the viewport height. (Correction: an earlier draft said 19px — that is the `get_screen_size` **mobile** divisor, not desktop. Mobile handling is a Task 3 carry-forward.)
 - **No `letter-spacing`** on the grid — it inserts gaps that break box-drawing border continuity. Adjust `font-size` only to hit the advance target.
 - **Fonts self-hosted, offline-safe.** IBM Plex Mono Regular + Bold as local woff2. The service worker (`sw.js`) is runtime cache-first and caches same-origin GETs automatically — do NOT modify `sw.js`.
 - **Keep working:** effect overlays (`#fx-flash`, `#fx-mood`, `body.fx-glitch`, mood tints), the `body.reduced` / F3 reduced-effects path, `prefers-reduced-motion`, the soft-keyboard bridge, and the Skip hold-to-fast-forward button.
@@ -28,12 +28,17 @@ Start the dev server **once** in the background and reuse it across tasks (it ho
 cd crates/smobb-web && trunk serve
 ```
 
-Serves at `http://127.0.0.1:8080`. After editing a file, wait for the rebuild, then verify with the Playwright MCP browser tools:
+Serves at `http://127.0.0.1:8080`. After editing a file, wait ~1-2s for the rebuild, then verify.
 
-- `browser_navigate` → `http://127.0.0.1:8080` (or `browser_navigate_back`/reload after a rebuild).
-- `browser_evaluate` with the **measurement snippet** below to get objective numbers.
-- `browser_take_screenshot` for the aesthetic check.
-- `browser_resize` to test multiple window sizes.
+**Verification tooling (important):** the Playwright *MCP* browser tools do NOT work in this environment — they require a system Google Chrome that is not installed (and installing it needs sudo). Use a small **Node + bundled-Chromium** script instead. A working one is at `scratchpad/measure.js` (Task 1's); it requires playwright from the npx cache (`/Users/delirium/.npm/_npx/705bc6b22212b352/node_modules/playwright`) and drives the cached Chromium (`~/Library/Caches/ms-playwright/chromium-1228`). Run it as `node scratchpad/measure.js <width> <height> <screenshot-path>` — it navigates to `http://127.0.0.1:8080`, runs the measurement function, prints the JSON, and saves a screenshot. Copy/extend it per task:
+
+- multi-size checks → run it at each `<width> <height>`.
+- UA-spoof (mobile cell metric) → add `userAgent` to `newPage({ ... })`.
+- scroll checks (Task 4) → add `page.mouse.wheel(0, dy)` / `page.evaluate` before measuring.
+
+If the npx playwright path is gone, reinstall with `npx --yes playwright@latest` (the Chromium binary is already cached, so this is fast).
+
+The **measurement snippet** (`voidPx`/`overflowX`/`rows`/`fontFamily`/`cellW`) is embedded in `measure.js`; the version below is the same logic for reference.
 
 **Measurement snippet** (paste as the `function` arg to `browser_evaluate`):
 
@@ -132,17 +137,18 @@ Then change the `html, body` font stack (currently `"Cascadia Code", "JetBrains 
 Replace the current `#grid` / `#grid pre` rules:
 
 ```css
-/* ratzilla assumes 10px x 19px cells (cols = innerW/10, rows = innerH/19).
-   Match it exactly so the grid fills the viewport and never overflows. */
+/* ratzilla desktop path assumes 10px x 20px cells (cols = innerW/10,
+   rows = innerH/20 in get_window_size). Match it exactly so the grid
+   fills the viewport and never overflows. */
 html, body { margin: 0; padding: 0; }
 #grid {
   padding: 0;
   margin: 0;
   font-size: 16.5px;   /* IBM Plex Mono advance ~0.6em -> ~9.9px (<=10) */
-  line-height: 19px;   /* exact row height to match rows = innerH/19 */
+  line-height: 20px;   /* exact row height to match rows = innerH/20 */
   white-space: pre;
 }
-#grid pre { margin: 0; line-height: 19px; }
+#grid pre { margin: 0; line-height: 20px; }
 ```
 
 Remove the existing `body { padding-bottom: 56px; }` rule and the `@media (min-width: 800px) { body { padding-bottom: 44px } }` line — the grid must occupy the full window height (the control bar becomes a pure overlay in Task 3). Leave the `#kbd` hidden-input rule as-is.
@@ -313,7 +319,17 @@ Replace the `#controls` block and its `@media (min-width: 800px)` variant:
 
 /* desktop keyboards do not need the touch bar */
 @media (min-width: 800px) { #controls { display: none; } }
+
+/* CARRY-FORWARD from Task 1: ratzilla's mobile path (get_screen_size) uses
+   rows = screenHeight / 19, not / 20. Match it with a 19px cell — but ONLY
+   for real mobile/tablet, keyed on the same user-agent test ratzilla uses
+   (is_mobile() = UA contains "mobile"/"tablet"). A narrow DESKTOP window is
+   NOT mobile and still needs 20px, so this must NOT be a viewport-width
+   media query. The `.is-mobile` class is set in controls.js (Task 4). */
+html.is-mobile #grid, html.is-mobile #grid pre { line-height: 19px; }
 ```
+
+Residual limitation (note, do not try to fully solve): on real mobile ratzilla sizes from the *device screen* (`window.screen`), not the visible viewport, so the grid can still extend below the fold regardless of line-height. The 19px match is the correct-direction fix; full mobile fit is out of scope.
 
 - [ ] **Step 2: Verify desktop (bar hidden, nothing occluded)**
 
@@ -347,6 +363,21 @@ The app scrolls the focused pane on `ArrowUp`/`ArrowDown` (large jumps on `PageU
 **Interfaces:**
 - Consumes: the existing `dispatchKey(key)` helper in `controls.js`.
 - Produces: wheel/trackpad/touch-swipe scroll the currently focused pane.
+
+- [ ] **Step 0: Mark real mobile/tablet for the cell-metric switch (Task 3 carry-forward)**
+
+At the TOP of `crates/smobb-web/controls.js` (before the control-bar button loop), add:
+
+```js
+// Mirror ratzilla's is_mobile() (UA-based) so CSS can switch the cell
+// height to match the mobile get_screen_size() /19 divisor. A narrow
+// desktop window is NOT mobile and must keep the 20px cell (Task 1/3).
+if (/mobile|tablet/i.test(navigator.userAgent)) {
+  document.documentElement.classList.add("is-mobile");
+}
+```
+
+Pairs with the `html.is-mobile #grid { line-height: 19px }` rule from Task 3. Verify with the node harness by spoofing a mobile user-agent: the class appears and `#grid` line-height computes to 19px, while a desktop UA keeps 20px.
 
 - [ ] **Step 1: Add wheel/trackpad scrolling**
 
