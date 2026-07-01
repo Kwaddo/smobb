@@ -195,7 +195,7 @@ pub fn hint_for_width(width: u16, reduced_effects: bool) -> Option<String> {
     } else {
         "[F3] effects"
     };
-    if width >= 90 {
+    if width >= 112 {
         Some(format!(
             "[Tab] sidebar  [<-/-> focus]  [hold Space] fast  [F2] instant  {}  ['leave' exits]  [Esc] quit",
             fx
@@ -641,15 +641,21 @@ mod tests {
     }
 
     #[test]
-    fn hint_boundary_90_is_full() {
-        let h = super::hint_for_width(90, false).expect("90 is full tier");
-        assert!(h.contains("[F2] instant"), "90 must be the full hint");
+    fn hint_boundary_112_is_full() {
+        let h = super::hint_for_width(112, false).expect("112 is full tier");
+        assert!(h.contains("[F2] instant"), "112 must be the full hint");
+        // The full hint plus the "> " prompt + 4-space separator must fit the
+        // threshold width, or ratatui's non-wrapping Paragraph clips the tail.
+        assert!(
+            h.chars().count() + 6 <= 112,
+            "full hint must fit in 112 cols"
+        );
     }
 
     #[test]
-    fn hint_boundary_89_is_short() {
-        let h = super::hint_for_width(89, false).expect("89 is short tier");
-        assert!(!h.contains("[F2] instant"), "89 must be the short hint");
+    fn hint_boundary_111_is_short() {
+        let h = super::hint_for_width(111, false).expect("111 is short tier");
+        assert!(!h.contains("[F2] instant"), "111 must be the short hint");
         assert!(h.contains("[Esc] quit"));
     }
 
