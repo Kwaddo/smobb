@@ -145,9 +145,12 @@ document.addEventListener(
 document.addEventListener("pointerup", () => { swipeY = null; });
 document.addEventListener("pointercancel", () => { swipeY = null; });
 
-// --- responsive: start with the sidebar hidden on phones -----------------
-if (window.matchMedia("(max-width: 700px)").matches) {
-  // ratzilla mounts asynchronously; nudge after it's listening.
+// --- responsive: hide the sidebar when there aren't enough columns -------
+// ratzilla lays out ~10px cells, so columns ~= width/10. Below ~64 cols the
+// 70/30 split gets cramped (phones), so start with the sidebar hidden. Uses
+// the same width source ratzilla sizes from (screen on touch, window else).
+const estCols = ((IS_TOUCH ? window.screen.width : window.innerWidth) || 0) / 10;
+if (estCols < 64) {
   window.addEventListener("TrunkApplicationStarted", () =>
     setTimeout(() => dispatchKey("F1"), 100)
   );
