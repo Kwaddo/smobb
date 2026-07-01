@@ -14,6 +14,11 @@ smobb-save.json
 
 # Cargo.lock is committed — this is an application/binary, not a library.
 
+# smobb-web dev verification (not shipped)
+crates/smobb-web/dev-shot.mjs
+crates/smobb-web/.shots/
+crates/smobb-web/node_modules/
+
 # macOS
 .DS_Store
 
