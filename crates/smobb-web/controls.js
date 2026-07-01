@@ -9,6 +9,18 @@ if (/mobile|tablet/i.test(navigator.userAgent)) {
   document.documentElement.classList.add("is-mobile");
 }
 
+// Touch AFFORDANCES (control bar, soft keyboard) key off capability, NOT UA.
+// iPadOS reports a desktop UA, so is-mobile (UA) would hide the bar; is-touch
+// (capability) shows it. is-mobile stays UA-only for the cell metric, which
+// must mirror ratzilla's own UA is_mobile() row divisor.
+const IS_TOUCH =
+  (window.matchMedia && window.matchMedia("(pointer: coarse)").matches) ||
+  navigator.maxTouchPoints > 0 ||
+  "ontouchstart" in window;
+if (IS_TOUCH) {
+  document.documentElement.classList.add("is-touch");
+}
+
 function dispatchKey(key) {
   document.dispatchEvent(
     new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true })

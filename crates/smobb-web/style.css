@@ -71,7 +71,7 @@ html, body {
   z-index: 9600;                         /* above bezel */
   padding-bottom: calc(5px + env(safe-area-inset-bottom, 0px));
 }
-html.is-mobile #controls { display: flex; }
+html.is-touch #controls { display: flex; }
 #controls button {
   flex: 1 1 0; min-width: 0;
   background: var(--btn);
