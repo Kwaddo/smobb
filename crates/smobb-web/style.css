@@ -90,33 +90,44 @@ html.is-touch #titlebar {
   padding: 0;
 }
 
-/* touch control bar */
+/* touch control bar: cohesive with the bezel, translucent, inside safe area */
 #controls {
   position: fixed;
-  left: 6px; right: 6px; bottom: 6px;   /* inside the bezel */
+  left: 8px;
+  right: 8px;
+  bottom: calc(6px + env(safe-area-inset-bottom, 0px));
   height: 44px;
   display: none;
-  gap: 6px;
-  padding: 5px;
-  background: rgba(18, 20, 24, 0.92);
-  border: 1px solid rgba(120, 140, 160, 0.18);
-  border-radius: 10px;
-  z-index: 9600;                         /* above bezel */
-  padding-bottom: calc(5px + env(safe-area-inset-bottom, 0px));
+  gap: 8px;
+  padding: 4px;
+  background: linear-gradient(180deg, rgba(16, 19, 24, 0.72), rgba(10, 12, 16, 0.92));
+  border: 1px solid rgba(120, 140, 160, 0.16);
+  border-radius: 12px;
+  z-index: 9600;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
 }
 html.is-touch #controls { display: flex; }
 #controls button {
-  flex: 1 1 0; min-width: 0;
-  background: var(--btn);
+  flex: 1 1 0;
+  min-width: 0;
+  background: rgba(34, 38, 44, 0.9);
   color: var(--fg);
-  border: 1px solid var(--bar-border);
-  border-radius: 6px;
-  font: inherit; font-size: 15px;
-  cursor: pointer; user-select: none; -webkit-user-select: none;
+  border: 1px solid rgba(120, 140, 160, 0.14);
+  border-radius: 8px;
+  font: inherit;
+  font-size: 15px;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
   touch-action: manipulation;
+  text-shadow: 0 0 4px rgba(160, 200, 220, 0.25);
 }
 #controls button:active,
-#controls button.active { background: var(--btn-active); }
+#controls button.active {
+  background: rgba(70, 90, 105, 0.95);
+  border-color: rgba(160, 200, 220, 0.4);
+}
 
 /* CARRY-FORWARD from Task 1: ratzilla's mobile path (get_screen_size) uses
    rows = screenHeight / 19, not / 20. Match it with a 19px cell — but ONLY
@@ -240,4 +251,4 @@ body.reduced.fx-glitch #grid {
   animation: none !important;
 }
 body.reduced #fx-flash { opacity: 0; }
-body.reduced #controls button[data-key="F3"] { background: var(--btn-active); }
+body.reduced #controls button[data-key="F3"] { background: rgba(70, 90, 105, 0.95); }
