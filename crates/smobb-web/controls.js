@@ -84,13 +84,18 @@ document.addEventListener(
   "wheel",
   (e) => {
     e.preventDefault(); // stop the page itself from scrolling
-    wheelAccum += e.deltaY;
+    // Normalize to pixels first: deltaMode 1 = DOM_DELTA_LINE (Firefox mouse
+    // wheels report ~1-3/notch here, not pixels), 2 = DOM_DELTA_PAGE.
+    const px = e.deltaMode === 1 ? e.deltaY * 24
+             : e.deltaMode === 2 ? e.deltaY * window.innerHeight
+             : e.deltaY;
     const STEP = 24; // px per line of scroll
-    if (Math.abs(e.deltaY) >= 240) {
-      dispatchKey(e.deltaY > 0 ? "PageDown" : "PageUp");
+    if (Math.abs(px) >= 240) {
+      dispatchKey(px > 0 ? "PageDown" : "PageUp");
       wheelAccum = 0;
       return;
     }
+    wheelAccum += px;
     while (Math.abs(wheelAccum) >= STEP) {
       dispatchKey(wheelAccum > 0 ? "ArrowDown" : "ArrowUp");
       wheelAccum -= Math.sign(wheelAccum) * STEP;
@@ -116,10 +121,11 @@ document.addEventListener(
     if (swipeY === null || e.pointerType !== "touch") return;
     const SWIPE = 24; // px per scroll line
     let dy = swipeY - e.clientY; // finger up => scroll down
+    const dir = Math.sign(dy);
     while (Math.abs(dy) >= SWIPE) {
       dispatchKey(dy > 0 ? "ArrowDown" : "ArrowUp");
-      dy -= Math.sign(dy) * SWIPE;
-      swipeY -= Math.sign(swipeY - e.clientY) * SWIPE;
+      dy -= dir * SWIPE;
+      swipeY -= dir * SWIPE;
     }
   },
   { passive: true }

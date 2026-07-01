@@ -16,7 +16,6 @@
 :root {
   --bg: #0b0b0b;
   --fg: #d0d0d0;
-  --bar: #161616;
   --bar-border: #333;
   --btn: #222;
   --btn-active: #3a3a3a;
@@ -63,15 +62,16 @@ html, body {
   position: fixed;
   left: 6px; right: 6px; bottom: 6px;   /* inside the bezel */
   height: 44px;
-  display: flex;
+  display: none;
   gap: 6px;
   padding: 5px;
   background: rgba(18, 20, 24, 0.92);
   border: 1px solid rgba(120, 140, 160, 0.18);
-  border-radius: 8px;
+  border-radius: 10px;
   z-index: 9600;                         /* above bezel */
   padding-bottom: calc(5px + env(safe-area-inset-bottom, 0px));
 }
+html.is-mobile #controls { display: flex; }
 #controls button {
   flex: 1 1 0; min-width: 0;
   background: var(--btn);
@@ -84,9 +84,6 @@ html, body {
 }
 #controls button:active,
 #controls button.active { background: var(--btn-active); }
-
-/* desktop keyboards do not need the touch bar */
-@media (min-width: 800px) { #controls { display: none; } }
 
 /* CARRY-FORWARD from Task 1: ratzilla's mobile path (get_screen_size) uses
    rows = screenHeight / 19, not / 20. Match it with a 19px cell — but ONLY
